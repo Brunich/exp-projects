@@ -1,8 +1,8 @@
 # Exp Projects
 
-Repositorio de experimentos y productos pequeños (web + backend) construidos de forma incremental.
+Repositorio deproductos pequeños (web + backend) construidos de forma personal.
 
-Objetivo: avance diario con valor real (utilizable, vendible o portfolio), no commits vacíos.
+Objetivo: avance diario con valor real (utilizable, vendible o portfolio), sin commits vacíos.
 
 ## Estructura
 
