@@ -1,5 +1,5 @@
 # Next Tasks
 
-1. Add client create/edit form with local state persistence (localStorage or API stub).
-2. Scaffold `api-leads-capture` backend (Fastify + lead validation + webhook).
+1. Scaffold `api-leads-capture` backend (Fastify + lead validation + webhook notify).
+2. Add client delete/archive action in web-client-tracker.
 3. Wire web-client-tracker to real API once backend endpoints exist.

@@ -9,6 +9,8 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - Client table with status badges and follow-up urgency
 - Overdue follow-up alert banner
 - Status filter (lead, active, negotiating, paused, closed)
+- Add and edit clients with form validation
+- Client list persisted in browser localStorage
 
 ## Quick start
 
@@ -58,6 +60,6 @@ docs/
 
 ## Next steps
 
-- Replace sample data with API calls (see `docs/api-contract.md`)
-- Add client create/edit forms
+- Replace localStorage with API calls (see `docs/api-contract.md`)
+- Add client delete/archive action
 - Persist sessions with a real auth provider

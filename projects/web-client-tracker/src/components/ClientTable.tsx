@@ -21,6 +21,7 @@ const STATUS_OPTIONS: Array<{ value: ClientStatus | "all"; label: string }> = [
 
 interface ClientTableProps {
   clients: Client[];
+  onEdit?: (client: Client) => void;
 }
 
 function formatFollowUpLabel(date: string): string {
@@ -31,7 +32,7 @@ function formatFollowUpLabel(date: string): string {
   return `In ${days}d`;
 }
 
-export function ClientTable({ clients }: ClientTableProps) {
+export function ClientTable({ clients, onEdit }: ClientTableProps) {
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "all">("all");
 
   const visibleClients = sortClientsByFollowUp(
@@ -78,13 +79,18 @@ export function ClientTable({ clients }: ClientTableProps) {
               <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:table-cell">
                 Notes
               </th>
+              {onEdit ? (
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Actions
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {visibleClients.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={onEdit ? 5 : 4}
                   className="px-4 py-8 text-center text-sm text-zinc-500"
                 >
                   No clients match this filter.
@@ -121,6 +127,17 @@ export function ClientTable({ clients }: ClientTableProps) {
                     <td className="hidden max-w-xs truncate px-4 py-3 text-sm text-zinc-600 lg:table-cell">
                       {client.notes ?? "—"}
                     </td>
+                    {onEdit ? (
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(client)}
+                          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })
