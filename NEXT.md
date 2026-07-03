@@ -1,5 +1,5 @@
 # Next Tasks
 
-1. Scaffold `web-client-tracker` (Next.js + auth stub + client list page).
-2. Add basic API contract doc for future backend integration.
-3. Prepare deploy config (Vercel) and env example.
+1. Add client create/edit form with local state persistence (localStorage or API stub).
+2. Scaffold `api-leads-capture` backend (Fastify + lead validation + webhook).
+3. Wire web-client-tracker to real API once backend endpoints exist.
