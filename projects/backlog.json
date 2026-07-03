@@ -1,0 +1,29 @@
+{
+  "rotation": ["web", "backend"],
+  "items": [
+    {
+      "id": "web-client-tracker",
+      "type": "web",
+      "title": "Freelancer Client Tracker",
+      "goal": "Track clients, status, and next follow-up date",
+      "status": "planned",
+      "sellable_angle": "Small businesses and freelancers"
+    },
+    {
+      "id": "api-leads-capture",
+      "type": "backend",
+      "title": "Lead Capture API",
+      "goal": "Receive form leads, validate payload, store and webhook notify",
+      "status": "planned",
+      "sellable_angle": "Landing pages and marketing teams"
+    },
+    {
+      "id": "web-service-quotes",
+      "type": "web",
+      "title": "Service Quote Builder",
+      "goal": "Generate PDF-ready quotes from service templates",
+      "status": "planned",
+      "sellable_angle": "Local service providers"
+    }
+  ]
+}
