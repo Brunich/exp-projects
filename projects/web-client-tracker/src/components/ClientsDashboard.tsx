@@ -1,37 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { Client } from "@/lib/types";
 import type { ClientFormInput } from "@/lib/client-validation";
 import {
   buildClientFromForm,
-  loadClientsFromStorage,
-  saveClientsToStorage,
   upsertClient,
 } from "@/lib/client-storage";
 import { getClientsNeedingFollowUp } from "@/lib/clients";
+import { useClientStorage } from "@/lib/use-client-storage";
 import { ClientForm } from "./ClientForm";
 import { ClientTable } from "./ClientTable";
 
 type FormMode = "create" | "edit" | null;
 
+function useIsHydrated() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function ClientsDashboard() {
-  const [clients, setClients] = useState<Client[]>([]);
+  const { clients, persist } = useClientStorage();
+  const isHydrated = useIsHydrated();
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setClients(loadClientsFromStorage(window.localStorage));
-    setIsReady(true);
-  }, []);
 
   const overdue = getClientsNeedingFollowUp(clients);
-
-  function persist(nextClients: Client[]) {
-    setClients(nextClients);
-    saveClientsToStorage(window.localStorage, nextClients);
-  }
 
   function openCreateForm() {
     setEditingClient(null);
@@ -60,7 +57,7 @@ export function ClientsDashboard() {
     closeForm();
   }
 
-  if (!isReady) {
+  if (!isHydrated) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-500 shadow-sm">
         Loading clients…
