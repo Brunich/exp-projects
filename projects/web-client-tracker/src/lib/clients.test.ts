@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  filterActiveClients,
+  filterArchivedClients,
   filterClientsByStatus,
   getClientsNeedingFollowUp,
+  isArchived,
   isFollowUpOverdue,
   SAMPLE_CLIENTS,
   sortClientsByFollowUp,
@@ -17,6 +20,40 @@ describe("isFollowUpOverdue", () => {
     const today = new Date(2026, 6, 3);
     expect(isFollowUpOverdue("2026-07-03", today)).toBe(false);
     expect(isFollowUpOverdue("2026-07-05", today)).toBe(false);
+  });
+});
+
+describe("isArchived", () => {
+  it("returns true when archivedAt is set", () => {
+    expect(isArchived({ ...SAMPLE_CLIENTS[0], archivedAt: "2026-07-01" })).toBe(
+      true,
+    );
+  });
+
+  it("returns false for active clients", () => {
+    expect(isArchived(SAMPLE_CLIENTS[0])).toBe(false);
+  });
+});
+
+describe("filterActiveClients", () => {
+  it("excludes archived clients", () => {
+    const mixed = [
+      SAMPLE_CLIENTS[0],
+      { ...SAMPLE_CLIENTS[1], archivedAt: "2026-07-01" },
+    ];
+    expect(filterActiveClients(mixed)).toHaveLength(1);
+    expect(filterActiveClients(mixed)[0].id).toBe(SAMPLE_CLIENTS[0].id);
+  });
+});
+
+describe("filterArchivedClients", () => {
+  it("returns only archived clients", () => {
+    const mixed = [
+      SAMPLE_CLIENTS[0],
+      { ...SAMPLE_CLIENTS[1], archivedAt: "2026-07-01" },
+    ];
+    expect(filterArchivedClients(mixed)).toHaveLength(1);
+    expect(filterArchivedClients(mixed)[0].id).toBe(SAMPLE_CLIENTS[1].id);
   });
 });
 
@@ -45,5 +82,15 @@ describe("getClientsNeedingFollowUp", () => {
     const today = new Date(2026, 6, 3);
     const overdue = getClientsNeedingFollowUp(SAMPLE_CLIENTS, today);
     expect(overdue.map((client) => client.name)).toEqual(["Marco Ruiz"]);
+  });
+
+  it("ignores archived clients", () => {
+    const today = new Date(2026, 6, 3);
+    const withArchived = SAMPLE_CLIENTS.map((client) =>
+      client.name === "Marco Ruiz"
+        ? { ...client, archivedAt: "2026-07-01" }
+        : client,
+    );
+    expect(getClientsNeedingFollowUp(withArchived, today)).toHaveLength(0);
   });
 });

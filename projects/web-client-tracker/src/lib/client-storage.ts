@@ -49,6 +49,29 @@ export function upsertClient(
   return next;
 }
 
+export function archiveClient(
+  clients: Client[],
+  id: string,
+  archivedAt: string = new Date().toISOString().slice(0, 10),
+): Client[] {
+  return clients.map((client) =>
+    client.id === id ? { ...client, archivedAt } : client,
+  );
+}
+
+export function restoreClient(clients: Client[], id: string): Client[] {
+  return clients.map((client) => {
+    if (client.id !== id) return client;
+    const { archivedAt, ...rest } = client;
+    void archivedAt;
+    return rest;
+  });
+}
+
+export function deleteClient(clients: Client[], id: string): Client[] {
+  return clients.filter((client) => client.id !== id);
+}
+
 export function loadClientsFromStorage(storage: Storage | null): Client[] {
   if (!storage) return SAMPLE_CLIENTS;
   return parseStoredClients(storage.getItem(CLIENTS_STORAGE_KEY));

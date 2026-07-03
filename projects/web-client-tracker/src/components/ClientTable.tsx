@@ -21,7 +21,11 @@ const STATUS_OPTIONS: Array<{ value: ClientStatus | "all"; label: string }> = [
 
 interface ClientTableProps {
   clients: Client[];
+  showArchived?: boolean;
   onEdit?: (client: Client) => void;
+  onArchive?: (client: Client) => void;
+  onRestore?: (client: Client) => void;
+  onDelete?: (client: Client) => void;
 }
 
 function formatFollowUpLabel(date: string): string {
@@ -32,18 +36,29 @@ function formatFollowUpLabel(date: string): string {
   return `In ${days}d`;
 }
 
-export function ClientTable({ clients, onEdit }: ClientTableProps) {
+export function ClientTable({
+  clients,
+  showArchived = false,
+  onEdit,
+  onArchive,
+  onRestore,
+  onDelete,
+}: ClientTableProps) {
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "all">("all");
 
   const visibleClients = sortClientsByFollowUp(
     filterClientsByStatus(clients, statusFilter),
   );
 
+  const hasActions = Boolean(onEdit || onArchive || onRestore || onDelete);
+  const columnCount = 4 + (hasActions ? 1 : 0);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-zinc-600">
           {visibleClients.length} client{visibleClients.length === 1 ? "" : "s"}
+          {showArchived ? " (archived)" : ""}
         </p>
         <label className="flex items-center gap-2 text-sm text-zinc-700">
           <span className="font-medium">Filter</span>
@@ -79,7 +94,7 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
               <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:table-cell">
                 Notes
               </th>
-              {onEdit ? (
+              {hasActions ? (
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
                   Actions
                 </th>
@@ -90,15 +105,18 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
             {visibleClients.length === 0 ? (
               <tr>
                 <td
-                  colSpan={onEdit ? 5 : 4}
+                  colSpan={columnCount}
                   className="px-4 py-8 text-center text-sm text-zinc-500"
                 >
-                  No clients match this filter.
+                  {showArchived
+                    ? "No archived clients."
+                    : "No clients match this filter."}
                 </td>
               </tr>
             ) : (
               visibleClients.map((client) => {
                 const overdue =
+                  !showArchived &&
                   client.status !== "closed" &&
                   isFollowUpOverdue(client.nextFollowUp);
 
@@ -108,6 +126,11 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
                       <p className="font-medium text-zinc-900">{client.name}</p>
                       <p className="text-sm text-zinc-500">{client.company}</p>
                       <p className="text-xs text-zinc-400">{client.email}</p>
+                      {showArchived && client.archivedAt ? (
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Archived {client.archivedAt}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <ClientStatusBadge status={client.status} />
@@ -116,26 +139,66 @@ export function ClientTable({ clients, onEdit }: ClientTableProps) {
                       <p className="text-sm text-zinc-900">
                         {client.nextFollowUp}
                       </p>
-                      <p
-                        className={`text-xs font-medium ${
-                          overdue ? "text-rose-600" : "text-zinc-500"
-                        }`}
-                      >
-                        {formatFollowUpLabel(client.nextFollowUp)}
-                      </p>
+                      {!showArchived ? (
+                        <p
+                          className={`text-xs font-medium ${
+                            overdue ? "text-rose-600" : "text-zinc-500"
+                          }`}
+                        >
+                          {formatFollowUpLabel(client.nextFollowUp)}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="hidden max-w-xs truncate px-4 py-3 text-sm text-zinc-600 lg:table-cell">
                       {client.notes ?? "—"}
                     </td>
-                    {onEdit ? (
+                    {hasActions ? (
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(client)}
-                          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {showArchived ? (
+                            <>
+                              {onRestore ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onRestore(client)}
+                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                  Restore
+                                </button>
+                              ) : null}
+                              {onDelete ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onDelete(client)}
+                                  className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
+                                >
+                                  Delete
+                                </button>
+                              ) : null}
+                            </>
+                          ) : (
+                            <>
+                              {onEdit ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onEdit(client)}
+                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                  Edit
+                                </button>
+                              ) : null}
+                              {onArchive ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onArchive(client)}
+                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50"
+                                >
+                                  Archive
+                                </button>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
                       </td>
                     ) : null}
                   </tr>

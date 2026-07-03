@@ -13,6 +13,8 @@ export interface Client {
   status: ClientStatus;
   nextFollowUp: string;
   notes?: string;
+  /** ISO date when the client was archived; omitted for active records */
+  archivedAt?: string;
 }
 
 export interface SessionUser {

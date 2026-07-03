@@ -67,6 +67,18 @@ export function daysUntilFollowUp(
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
+export function isArchived(client: Client): boolean {
+  return Boolean(client.archivedAt);
+}
+
+export function filterActiveClients(clients: Client[]): Client[] {
+  return clients.filter((client) => !isArchived(client));
+}
+
+export function filterArchivedClients(clients: Client[]): Client[] {
+  return clients.filter(isArchived);
+}
+
 export function filterClientsByStatus(
   clients: Client[],
   status: ClientStatus | "all",
@@ -87,7 +99,9 @@ export function getClientsNeedingFollowUp(
 ): Client[] {
   return clients.filter(
     (client) =>
-      client.status !== "closed" && isFollowUpOverdue(client.nextFollowUp, today),
+      !isArchived(client) &&
+      client.status !== "closed" &&
+      isFollowUpOverdue(client.nextFollowUp, today),
   );
 }
 
