@@ -14,7 +14,7 @@
       "type": "backend",
       "title": "Lead Capture API",
       "goal": "Receive form leads, validate payload, store and webhook notify",
-      "status": "planned",
+      "status": "in_progress",
       "sellable_angle": "Landing pages and marketing teams"
     },
     {
