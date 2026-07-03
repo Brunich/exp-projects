@@ -1,6 +1,6 @@
 # Lead Capture API
 
-Fastify API that receives marketing form leads, validates payloads, stores them in memory, and optionally notifies a webhook.
+Fastify API that receives marketing form leads, validates payloads, persists them to a JSON file, and optionally notifies a webhook.
 
 Built for landing pages and small marketing teams that need a lightweight lead inbox without a full CRM.
 
@@ -9,6 +9,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `POST /leads` — public endpoint for form submissions with Zod validation
 - `GET /leads` — list stored leads (API key required)
 - `GET /health` — service health check
+- JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
 
 ## Quick start
@@ -27,6 +28,7 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | ---------------- | ------------------------------------------------ |
 | `PORT`           | HTTP port (default `3001`)                       |
 | `API_KEY`        | Key for `GET /leads` (header `x-api-key`)        |
+| `LEADS_FILE`     | Path to JSON leads store (default `data/leads.json`) |
 | `WEBHOOK_URL`    | Optional URL notified on each new lead           |
 | `WEBHOOK_SECRET` | Optional HMAC secret for webhook signatures      |
 
@@ -102,6 +104,6 @@ curl http://localhost:3001/leads \
 
 ## Next steps
 
-- Persist leads to SQLite or Supabase
 - Add rate limiting and honeypot field validation
 - Retry failed webhook deliveries with a queue
+- Optional Supabase sync for multi-instance deploys

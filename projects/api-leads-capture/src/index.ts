@@ -6,7 +6,9 @@ const apiKey = process.env.API_KEY ?? "dev-api-key-change-me";
 const webhookUrl = process.env.WEBHOOK_URL?.trim();
 const webhookSecret = process.env.WEBHOOK_SECRET?.trim();
 
-const store = new LeadStore();
+const leadsFile = process.env.LEADS_FILE?.trim() || "data/leads.json";
+
+const store = new LeadStore({ filePath: leadsFile });
 
 const app = buildApp({
   apiKey,
