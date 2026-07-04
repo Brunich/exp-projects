@@ -65,6 +65,27 @@ describe("ClientStore", () => {
     expect(store.getById(created.id)).toBeNull();
   });
 
+  it("archives and restores multiple clients in one write", () => {
+    const store = createStore();
+    const first = store.create(validInput);
+    const second = store.create({
+      ...validInput,
+      name: "John Smith",
+      email: "john@acme.com",
+    });
+
+    const archived = store.archiveMany([first.id, second.id, "missing-id"]);
+    expect(archived.updated).toHaveLength(2);
+    expect(archived.notFound).toEqual(["missing-id"]);
+    expect(store.getById(first.id)?.archivedAt).toBeTruthy();
+    expect(store.getById(second.id)?.archivedAt).toBeTruthy();
+
+    const restored = store.restoreMany([first.id, second.id]);
+    expect(restored.updated).toHaveLength(2);
+    expect(store.getById(first.id)?.archivedAt).toBeUndefined();
+    expect(store.getById(second.id)?.archivedAt).toBeUndefined();
+  });
+
   it("writes valid JSON to disk", () => {
     const store = createStore();
     store.create(validInput);

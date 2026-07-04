@@ -88,6 +88,32 @@ Partial update for client fields, or archive/restore via action.
 
 **Response `200`**: `{ "data": { ...updated client } }`
 
+### `PATCH /clients/bulk`
+
+Archive or restore multiple clients in one request.
+
+**Request body**
+
+```json
+{
+  "action": "archive",
+  "ids": ["uuid-1", "uuid-2"]
+}
+```
+
+`action` must be `archive` or `restore`. `ids` must be a non-empty array of client UUIDs.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "updated": [{ "...client fields..." }],
+    "notFound": ["missing-uuid"]
+  }
+}
+```
+
 ### `DELETE /clients/:id`
 
 Permanently removes a client (typically from the archived list).

@@ -5,6 +5,8 @@ import type { Client } from "./types";
 import type { ClientFormInput } from "./client-validation";
 import {
   archiveClientById,
+  bulkArchiveClients,
+  bulkRestoreClients,
   createClient,
   deleteClientById,
   fetchClients,
@@ -130,6 +132,36 @@ export function useClientStorage() {
     [runMutation],
   );
 
+  const archiveClientsBulk = useCallback(
+    async (ids: string[]) => {
+      await runMutation(async () => {
+        const result = await bulkArchiveClients(ids);
+        const updatedById = new Map(
+          result.updated.map((client) => [client.id, client]),
+        );
+        setClients((prev) =>
+          prev.map((client) => updatedById.get(client.id) ?? client),
+        );
+      });
+    },
+    [runMutation],
+  );
+
+  const restoreClientsBulk = useCallback(
+    async (ids: string[]) => {
+      await runMutation(async () => {
+        const result = await bulkRestoreClients(ids);
+        const updatedById = new Map(
+          result.updated.map((client) => [client.id, client]),
+        );
+        setClients((prev) =>
+          prev.map((client) => updatedById.get(client.id) ?? client),
+        );
+      });
+    },
+    [runMutation],
+  );
+
   return {
     clients,
     loading,
@@ -139,7 +171,9 @@ export function useClientStorage() {
     addClient,
     editClient,
     archiveClient,
+    archiveClientsBulk,
     restoreClient,
+    restoreClientsBulk,
     removeClient,
   };
 }

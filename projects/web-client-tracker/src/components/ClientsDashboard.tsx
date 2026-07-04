@@ -17,6 +17,8 @@ type FormMode = "create" | "edit" | null;
 
 type PendingAction =
   | { type: "archive"; client: Client }
+  | { type: "bulk-archive"; ids: string[] }
+  | { type: "bulk-restore"; ids: string[] }
   | { type: "delete"; client: Client };
 
 export function ClientsDashboard() {
@@ -28,12 +30,15 @@ export function ClientsDashboard() {
     addClient,
     editClient,
     archiveClient,
+    archiveClientsBulk,
     restoreClient,
+    restoreClientsBulk,
     removeClient,
   } = useClientStorage();
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
   );
@@ -71,6 +76,16 @@ export function ClientsDashboard() {
     setPendingAction({ type: "archive", client });
   }
 
+  function handleBulkArchive() {
+    if (selectedIds.length === 0) return;
+    setPendingAction({ type: "bulk-archive", ids: selectedIds });
+  }
+
+  function handleBulkRestore() {
+    if (selectedIds.length === 0) return;
+    setPendingAction({ type: "bulk-restore", ids: selectedIds });
+  }
+
   function handleDelete(client: Client) {
     setPendingAction({ type: "delete", client });
   }
@@ -84,11 +99,22 @@ export function ClientsDashboard() {
 
     if (pendingAction.type === "archive") {
       await archiveClient(pendingAction.client.id);
+    } else if (pendingAction.type === "bulk-archive") {
+      await archiveClientsBulk(pendingAction.ids);
+      setSelectedIds([]);
+    } else if (pendingAction.type === "bulk-restore") {
+      await restoreClientsBulk(pendingAction.ids);
+      setSelectedIds([]);
     } else {
       await removeClient(pendingAction.client.id);
     }
 
     setPendingAction(null);
+  }
+
+  function switchTab(archived: boolean) {
+    setShowArchived(archived);
+    setSelectedIds([]);
   }
 
   if (loading) {
@@ -129,7 +155,7 @@ export function ClientsDashboard() {
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={() => setShowArchived(false)}
+          onClick={() => switchTab(false)}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
             !showArchived
               ? "bg-indigo-100 text-indigo-800"
@@ -140,7 +166,7 @@ export function ClientsDashboard() {
         </button>
         <button
           type="button"
-          onClick={() => setShowArchived(true)}
+          onClick={() => switchTab(true)}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
             showArchived
               ? "bg-indigo-100 text-indigo-800"
@@ -162,6 +188,41 @@ export function ClientsDashboard() {
         ) : null}
       </div>
 
+      {selectedIds.length > 0 ? (
+        <section className="flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+          <p className="text-sm font-medium text-indigo-900">
+            {selectedIds.length} selected
+          </p>
+          {showArchived ? (
+            <button
+              type="button"
+              disabled={mutating}
+              onClick={handleBulkRestore}
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
+            >
+              Restore selected
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={mutating}
+              onClick={handleBulkArchive}
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
+            >
+              Archive selected
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={mutating}
+            onClick={() => setSelectedIds([])}
+            className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-medium text-indigo-800 transition hover:bg-indigo-100 disabled:opacity-60"
+          >
+            Clear selection
+          </button>
+        </section>
+      ) : null}
+
       {!showArchived && overdue.length > 0 ? (
         <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
           <p className="text-sm font-medium text-rose-800">
@@ -178,6 +239,9 @@ export function ClientsDashboard() {
         <ClientTable
           clients={archivedClients}
           showArchived
+          selectable
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
           onRestore={handleRestore}
           onDelete={handleDelete}
           disabled={mutating}
@@ -185,6 +249,9 @@ export function ClientsDashboard() {
       ) : (
         <ClientTable
           clients={activeClients}
+          selectable
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
           onEdit={openEditForm}
           onArchive={handleArchive}
           disabled={mutating}
@@ -219,6 +286,26 @@ export function ClientsDashboard() {
           title="Archive client?"
           message={`${pendingAction.client.name} will move to archived clients. You can restore them later.`}
           confirmLabel="Archive"
+          onConfirm={confirmPendingAction}
+          onCancel={() => setPendingAction(null)}
+        />
+      ) : null}
+
+      {pendingAction?.type === "bulk-archive" ? (
+        <ConfirmDialog
+          title="Archive selected clients?"
+          message={`${pendingAction.ids.length} client${pendingAction.ids.length === 1 ? "" : "s"} will move to archived clients. You can restore them later.`}
+          confirmLabel="Archive"
+          onConfirm={confirmPendingAction}
+          onCancel={() => setPendingAction(null)}
+        />
+      ) : null}
+
+      {pendingAction?.type === "bulk-restore" ? (
+        <ConfirmDialog
+          title="Restore selected clients?"
+          message={`${pendingAction.ids.length} client${pendingAction.ids.length === 1 ? "" : "s"} will return to your active list.`}
+          confirmLabel="Restore"
           onConfirm={confirmPendingAction}
           onCancel={() => setPendingAction(null)}
         />

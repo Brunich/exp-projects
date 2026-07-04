@@ -91,3 +91,26 @@ export async function deleteClientById(id: string): Promise<void> {
   const response = await fetch(`/api/clients/${id}`, { method: "DELETE" });
   await parseResponse<{ id: string }>(response);
 }
+
+interface BulkActionResult {
+  updated: Client[];
+  notFound: string[];
+}
+
+export async function bulkArchiveClients(ids: string[]): Promise<BulkActionResult> {
+  const response = await fetch("/api/clients/bulk", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action: "archive", ids }),
+  });
+  return parseResponse<BulkActionResult>(response);
+}
+
+export async function bulkRestoreClients(ids: string[]): Promise<BulkActionResult> {
+  const response = await fetch("/api/clients/bulk", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action: "restore", ids }),
+  });
+  return parseResponse<BulkActionResult>(response);
+}

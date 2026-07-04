@@ -89,6 +89,35 @@ export class ClientStore {
     return archived;
   }
 
+  archiveMany(
+    ids: string[],
+    archivedAt: string = new Date().toISOString().slice(0, 10),
+  ): { updated: Client[]; notFound: string[] } {
+    const uniqueIds = [...new Set(ids)];
+    const updated: Client[] = [];
+    const notFound: string[] = [];
+
+    for (const id of uniqueIds) {
+      const existing = this.getById(id);
+      if (!existing) {
+        notFound.push(id);
+        continue;
+      }
+
+      updated.push({ ...existing, archivedAt });
+    }
+
+    if (updated.length > 0) {
+      const updatedById = new Map(updated.map((client) => [client.id, client]));
+      this.clients = this.clients.map(
+        (client) => updatedById.get(client.id) ?? client,
+      );
+      this.persistToFile();
+    }
+
+    return { updated, notFound };
+  }
+
   restore(id: string): Client | null {
     const existing = this.getById(id);
     if (!existing) return null;
@@ -101,6 +130,34 @@ export class ClientStore {
     );
     this.persistToFile();
     return rest;
+  }
+
+  restoreMany(ids: string[]): { updated: Client[]; notFound: string[] } {
+    const uniqueIds = [...new Set(ids)];
+    const updated: Client[] = [];
+    const notFound: string[] = [];
+
+    for (const id of uniqueIds) {
+      const existing = this.getById(id);
+      if (!existing) {
+        notFound.push(id);
+        continue;
+      }
+
+      const { archivedAt, ...rest } = existing;
+      void archivedAt;
+      updated.push(rest);
+    }
+
+    if (updated.length > 0) {
+      const updatedById = new Map(updated.map((client) => [client.id, client]));
+      this.clients = this.clients.map(
+        (client) => updatedById.get(client.id) ?? client,
+      );
+      this.persistToFile();
+    }
+
+    return { updated, notFound };
   }
 
   delete(id: string): boolean {

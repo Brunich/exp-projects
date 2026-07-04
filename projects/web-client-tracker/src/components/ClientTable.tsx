@@ -23,6 +23,9 @@ interface ClientTableProps {
   clients: Client[];
   showArchived?: boolean;
   disabled?: boolean;
+  selectable?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
   onEdit?: (client: Client) => void;
   onArchive?: (client: Client) => void;
   onRestore?: (client: Client) => void;
@@ -41,6 +44,9 @@ export function ClientTable({
   clients,
   showArchived = false,
   disabled = false,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
   onEdit,
   onArchive,
   onRestore,
@@ -53,7 +59,39 @@ export function ClientTable({
   );
 
   const hasActions = Boolean(onEdit || onArchive || onRestore || onDelete);
-  const columnCount = 4 + (hasActions ? 1 : 0);
+  const showSelection = selectable && Boolean(onSelectionChange);
+  const visibleIds = visibleClients.map((client) => client.id);
+  const selectedVisibleCount = visibleIds.filter((id) =>
+    selectedIds.includes(id),
+  ).length;
+  const allVisibleSelected =
+    visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+
+  function toggleClient(id: string) {
+    if (!onSelectionChange) return;
+
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter((selectedId) => selectedId !== id));
+      return;
+    }
+
+    onSelectionChange([...selectedIds, id]);
+  }
+
+  function toggleAllVisible() {
+    if (!onSelectionChange) return;
+
+    if (allVisibleSelected) {
+      onSelectionChange(
+        selectedIds.filter((id) => !visibleIds.includes(id)),
+      );
+      return;
+    }
+
+    onSelectionChange([...new Set([...selectedIds, ...visibleIds])]);
+  }
+
+  const columnCount = 4 + (showSelection ? 1 : 0) + (hasActions ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -84,6 +122,18 @@ export function ClientTable({
         <table className="min-w-full divide-y divide-zinc-200">
           <thead className="bg-zinc-50">
             <tr>
+              {showSelection ? (
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all visible clients"
+                    checked={allVisibleSelected}
+                    disabled={disabled || visibleClients.length === 0}
+                    onChange={toggleAllVisible}
+                    className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                </th>
+              ) : null}
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Client
               </th>
@@ -124,6 +174,18 @@ export function ClientTable({
 
                 return (
                   <tr key={client.id} className="hover:bg-zinc-50/80">
+                    {showSelection ? (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${client.name}`}
+                          checked={selectedIds.includes(client.id)}
+                          disabled={disabled}
+                          onChange={() => toggleClient(client.id)}
+                          className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3">
                       <p className="font-medium text-zinc-900">{client.name}</p>
                       <p className="text-sm text-zinc-500">{client.company}</p>
