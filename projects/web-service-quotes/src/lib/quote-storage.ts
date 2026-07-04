@@ -102,6 +102,32 @@ export function deleteSavedQuote(quotes: SavedQuote[], id: string): SavedQuote[]
   return quotes.filter((quote) => quote.id !== id);
 }
 
+export function clearDraftIfSavedQuoteId(
+  storage: Storage | null,
+  id: string,
+): void {
+  if (!storage) return;
+
+  const state = loadDraftFromStorage(storage);
+  if (state.savedQuoteId !== id) return;
+
+  saveDraftToStorage(storage, { draft: createEmptyQuote() });
+}
+
+export function removeSavedQuoteFromStorage(
+  storage: Storage | null,
+  id: string,
+): boolean {
+  if (!storage) return false;
+
+  const quotes = loadSavedQuotesFromStorage(storage);
+  if (!quotes.some((quote) => quote.id === id)) return false;
+
+  saveSavedQuotesToStorage(storage, deleteSavedQuote(quotes, id));
+  clearDraftIfSavedQuoteId(storage, id);
+  return true;
+}
+
 export function getSavedQuoteById(
   quotes: SavedQuote[],
   id: string,

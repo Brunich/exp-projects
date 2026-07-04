@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { calculateQuoteTotals, formatCurrency } from "@/lib/quote";
 import {
   getSavedQuotesSnapshot,
+  removeSavedQuoteFromStorage,
   savedQuoteToDraft,
   subscribeQuotesStorage,
 } from "@/lib/quote-storage";
 import type { SavedQuote } from "@/lib/types";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 
 function formatQuoteLabel(quote: SavedQuote): string {
@@ -28,11 +30,19 @@ function formatUpdatedAt(iso: string): string {
 }
 
 export function SavedQuotesList() {
+  const [pendingDelete, setPendingDelete] = useState<SavedQuote | null>(null);
   const quotes = useSyncExternalStore(
     subscribeQuotesStorage,
     getSavedQuotesSnapshot,
     () => [],
   );
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+
+    removeSavedQuoteFromStorage(window.localStorage, pendingDelete.id);
+    setPendingDelete(null);
+  }
 
   if (quotes.length === 0) {
     return (
@@ -76,7 +86,7 @@ export function SavedQuotesList() {
                     {formatUpdatedAt(quote.updatedAt)}
                   </p>
                 </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-zinc-900">
                     {formatCurrency(totals.total)}
                   </p>
@@ -87,12 +97,31 @@ export function SavedQuotesList() {
                     label="PDF"
                     className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(quote)}
+                    className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                    aria-label={`Delete ${formatQuoteLabel(quote)}`}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </li>
           );
         })}
       </ul>
+
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="Delete saved quote?"
+          message={`"${formatQuoteLabel(pendingDelete)}" will be removed from this device. This cannot be undone.`}
+          confirmLabel="Delete quote"
+          variant="danger"
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </section>
   );
 }

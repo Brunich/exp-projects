@@ -5,6 +5,9 @@ import {
   draftToSavedQuote,
   parseDraftState,
   parseSavedQuotes,
+  QUOTES_DRAFT_KEY,
+  QUOTES_LIST_KEY,
+  removeSavedQuoteFromStorage,
   savedQuoteToDraft,
   serializeDraftState,
   serializeSavedQuotes,
@@ -114,5 +117,67 @@ describe("deleteSavedQuote", () => {
     const result = deleteSavedQuote([sampleSavedQuote, other], "quote-1");
 
     expect(result).toEqual([other]);
+  });
+});
+
+function createMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key: string) {
+      return store.get(key) ?? null;
+    },
+    key(index: number) {
+      return [...store.keys()][index] ?? null;
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value);
+    },
+  };
+}
+
+describe("removeSavedQuoteFromStorage", () => {
+  it("removes a saved quote and returns true", () => {
+    const storage = createMemoryStorage();
+    storage.setItem(QUOTES_LIST_KEY, serializeSavedQuotes([sampleSavedQuote]));
+
+    expect(removeSavedQuoteFromStorage(storage, "quote-1")).toBe(true);
+    expect(storage.getItem(QUOTES_LIST_KEY)).toBe("[]");
+  });
+
+  it("returns false when the quote id is missing", () => {
+    const storage = createMemoryStorage();
+    storage.setItem(QUOTES_LIST_KEY, serializeSavedQuotes([sampleSavedQuote]));
+
+    expect(removeSavedQuoteFromStorage(storage, "missing")).toBe(false);
+    expect(parseSavedQuotes(storage.getItem(QUOTES_LIST_KEY))).toEqual([
+      sampleSavedQuote,
+    ]);
+  });
+
+  it("clears the draft when it references the deleted quote", () => {
+    const storage = createMemoryStorage();
+    storage.setItem(QUOTES_LIST_KEY, serializeSavedQuotes([sampleSavedQuote]));
+    storage.setItem(
+      QUOTES_DRAFT_KEY,
+      serializeDraftState({
+        draft: sampleDraft,
+        savedQuoteId: "quote-1",
+      }),
+    );
+
+    removeSavedQuoteFromStorage(storage, "quote-1");
+
+    const draftState = parseDraftState(storage.getItem(QUOTES_DRAFT_KEY));
+    expect(draftState.savedQuoteId).toBeUndefined();
+    expect(draftState.draft.clientName).toBe("");
   });
 });

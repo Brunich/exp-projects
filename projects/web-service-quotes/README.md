@@ -12,6 +12,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Print-ready preview (browser print for quick copies)
 - Draft auto-save in browser local storage while editing
 - Explicit save to a local quote library with resume/edit from home
+- Delete saved quotes from the home list or while editing (with confirmation)
 
 ## Quick start
 
@@ -56,7 +57,7 @@ src/
 | `service-quotes:draft` | In-progress draft (auto-saved) |
 | `service-quotes:saved` | Saved quote library |
 
-Saved quotes stay on the current browser/device. Use **Save quote** in the builder to add or update the library. The home page lists saved quotes; click one to resume editing or use **PDF** to download a copy.
+Saved quotes stay on the current browser/device. Use **Save quote** in the builder to add or update the library. The home page lists saved quotes; click one to resume editing, use **PDF** to download a copy, or **Delete** to remove a quote from this device.
 
 ## PDF export
 
@@ -72,6 +73,5 @@ Saved quotes stay on the current browser/device. Use **Save quote** in the build
 ## Next steps
 
 - Branded PDF export with logo upload
-- Delete action for saved quotes from the home list
 - Custom template editor for each business
 - Cloud sync API for multi-device access

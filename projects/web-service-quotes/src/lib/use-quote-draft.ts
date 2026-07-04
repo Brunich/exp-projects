@@ -9,6 +9,7 @@ import {
   loadDraftFromStorage,
   loadSavedQuotesFromStorage,
   notifyQuotesStorageUpdated,
+  removeSavedQuoteFromStorage,
   saveDraftToStorage,
   saveSavedQuotesToStorage,
   savedQuoteToDraft,
@@ -160,6 +161,25 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
     setSaveMessage(null);
   }, []);
 
+  const deleteQuote = useCallback(() => {
+    const id = draftState.savedQuoteId;
+    if (!id) return false;
+
+    const storage = window.localStorage;
+    const removed = removeSavedQuoteFromStorage(storage, id);
+    if (!removed) return false;
+
+    const empty: QuoteDraftState = { draft: createEmptyQuote() };
+    saveDraftToStorage(storage, empty);
+    setStore((current) => ({
+      draftState: empty,
+      savedQuotes: loadSavedQuotesFromStorage(storage),
+      hydrated: current.hydrated,
+    }));
+    setSaveMessage(null);
+    return true;
+  }, [draftState.savedQuoteId]);
+
   return {
     quote: draftState.draft,
     selectedTemplateId: draftState.selectedTemplateId,
@@ -171,5 +191,6 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
     setSelectedTemplateId,
     saveQuote,
     startNewQuote,
+    deleteQuote,
   };
 }

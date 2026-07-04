@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { QuoteDraft, ServiceTemplate } from "@/lib/types";
 import {
   calculateQuoteTotals,
@@ -8,6 +9,7 @@ import {
   formatCurrency,
 } from "@/lib/quote";
 import { useQuoteDraft } from "@/lib/use-quote-draft";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuotePreview } from "./QuotePreview";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
@@ -18,6 +20,8 @@ interface QuoteBuilderProps {
 }
 
 export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
+  const router = useRouter();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const {
     quote,
     selectedTemplateId,
@@ -28,6 +32,7 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
     setSelectedTemplateId,
     saveQuote,
     startNewQuote,
+    deleteQuote,
   } = useQuoteDraft({ savedQuoteId, startFresh });
 
   const totals = useMemo(
@@ -80,6 +85,13 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
     }));
   }
 
+  function handleDeleteConfirmed() {
+    if (deleteQuote()) {
+      setShowDeleteConfirm(false);
+      router.push("/");
+    }
+  }
+
   if (!hydrated) {
     return (
       <p className="text-sm text-zinc-500" role="status">
@@ -107,6 +119,15 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          {currentSavedId ? (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50"
+            >
+              Delete
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={startNewQuote}
@@ -286,6 +307,17 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
       </div>
 
       <QuotePreview quote={quote} />
+
+      {showDeleteConfirm ? (
+        <ConfirmDialog
+          title="Delete saved quote?"
+          message="This quote will be removed from this device. This cannot be undone."
+          confirmLabel="Delete quote"
+          variant="danger"
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      ) : null}
     </div>
   );
 }
