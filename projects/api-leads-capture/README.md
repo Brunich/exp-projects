@@ -17,6 +17,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - Background worker processes the retry queue on an interval
 - `GET /webhooks/queue` — inspect pending and dead webhook deliveries (API key required)
 - `POST /webhooks/queue/:id/replay` — replay a dead-letter webhook delivery (API key required)
+- `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
 
 ## Quick start
 
@@ -135,6 +136,27 @@ Requires API key. Requeues a dead-letter item for immediate retry and runs the w
 
 Returns `400` if the item is still pending, or `404` if the id is unknown.
 
+### `POST /webhooks/queue/replay-dead`
+
+Requires API key. Requeues every dead-letter item for immediate retry and runs the worker once.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "replayedCount": 2,
+    "items": [{ "...replayed queue item..." }],
+    "processResult": {
+      "processed": 2,
+      "delivered": 2,
+      "rescheduled": 0,
+      "dead": 0
+    }
+  }
+}
+```
+
 ## Scripts
 
 | Command        | Description              |
@@ -159,4 +181,4 @@ curl http://localhost:3001/leads \
 ## Next steps
 
 - Optional Supabase sync for multi-instance deploys
-- Bulk replay for all dead-letter webhook items
+- Filtered replay by date or lead source for dead-letter items

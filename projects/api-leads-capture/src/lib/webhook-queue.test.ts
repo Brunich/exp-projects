@@ -135,6 +135,40 @@ describe("WebhookQueueStore", () => {
     expect(() => store.replayDeadLetter(item.id)).toThrow(/not dead/);
   });
 
+  it("replays every dead-letter item in one call", () => {
+    const store = new WebhookQueueStore({ maxAttempts: 2 });
+    const now = new Date("2026-07-04T10:00:00.000Z");
+    const secondLead: Lead = {
+      id: "22222222-2222-4222-8222-222222222222",
+      name: "John Smith",
+      email: "john@example.com",
+      source: "referral",
+      createdAt: now.toISOString(),
+    };
+
+    for (const lead of [sampleLead, secondLead]) {
+      const item = store.enqueue(
+        lead,
+        { url: "https://hooks.example.com/leads" },
+        { delivered: false, error: "timeout" },
+        now,
+      );
+
+      store.recordFailure(
+        item.id,
+        { delivered: false, error: "timeout again" },
+        now,
+      );
+    }
+
+    expect(store.stats().dead).toBe(2);
+
+    const replayed = store.replayAllDeadLetters(now);
+    expect(replayed).toHaveLength(2);
+    expect(replayed.every((item) => item.status === "pending")).toBe(true);
+    expect(store.stats()).toEqual({ pending: 2, dead: 0, total: 2 });
+  });
+
   it("returns only pending items that are due", () => {
     const store = new WebhookQueueStore({ maxAttempts: 5 });
     const now = new Date("2026-07-04T10:00:00.000Z");

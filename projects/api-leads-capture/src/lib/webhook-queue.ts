@@ -107,6 +107,10 @@ export class WebhookQueueStore {
     };
   }
 
+  listDeadLetters(): WebhookQueueItem[] {
+    return this.items.filter((item) => item.status === "dead");
+  }
+
   enqueue(
     lead: Lead,
     config: WebhookConfig,
@@ -188,6 +192,11 @@ export class WebhookQueueStore {
 
     this.persistToFile();
     return item;
+  }
+
+  replayAllDeadLetters(now = new Date()): WebhookQueueItem[] {
+    const deadIds = this.listDeadLetters().map((item) => item.id);
+    return deadIds.map((id) => this.replayDeadLetter(id, now));
   }
 
   recordFailure(

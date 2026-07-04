@@ -39,6 +39,32 @@ export async function registerWebhookRoutes(
     });
   });
 
+  app.post("/webhooks/queue/replay-dead", async (request, reply) => {
+    if (!isAuthorized(request, config.apiKey)) {
+      return reply.status(401).send(unauthorizedError());
+    }
+
+    if (!config.webhookQueue) {
+      return reply.status(404).send({
+        error: {
+          code: "NOT_CONFIGURED",
+          message: "Webhook queue is not enabled",
+        },
+      });
+    }
+
+    const items = config.webhookQueue.replayAllDeadLetters();
+    const processResult = await processWebhookQueue(config.webhookQueue);
+
+    return reply.send({
+      data: {
+        replayedCount: items.length,
+        items,
+        processResult,
+      },
+    });
+  });
+
   app.post("/webhooks/queue/:id/replay", async (request, reply) => {
     if (!isAuthorized(request, config.apiKey)) {
       return reply.status(401).send(unauthorizedError());
