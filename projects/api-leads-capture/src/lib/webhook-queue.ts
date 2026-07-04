@@ -163,6 +163,33 @@ export class WebhookQueueStore {
     return true;
   }
 
+  getById(id: string): WebhookQueueItem | undefined {
+    return this.items.find((item) => item.id === id);
+  }
+
+  replayDeadLetter(id: string, now = new Date()): WebhookQueueItem {
+    const item = this.items.find((entry) => entry.id === id);
+
+    if (!item) {
+      throw new Error(`Webhook queue item not found: ${id}`);
+    }
+
+    if (item.status !== "dead") {
+      throw new Error(`Webhook queue item is not dead: ${id}`);
+    }
+
+    const timestamp = now.toISOString();
+    item.status = "pending";
+    item.attempts = 0;
+    item.nextRetryAt = timestamp;
+    item.lastError = undefined;
+    item.lastStatusCode = undefined;
+    item.updatedAt = timestamp;
+
+    this.persistToFile();
+    return item;
+  }
+
   recordFailure(
     id: string,
     failure: WebhookResult,

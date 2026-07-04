@@ -54,6 +54,77 @@ describe("webhook queue routes", () => {
     });
     expect(response.json().data.items).toEqual([]);
   });
+
+  it("replays dead-letter deliveries and processes them immediately", async () => {
+    const now = new Date("2026-07-04T10:00:00.000Z");
+    const item = webhookQueue.enqueue(
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "Dead Letter",
+        email: "dead@example.com",
+        source: "landing",
+        createdAt: now.toISOString(),
+      },
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+      now,
+    );
+
+    webhookQueue.recordFailure(
+      item.id,
+      { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+      now,
+    );
+    webhookQueue.recordFailure(
+      item.id,
+      { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+      now,
+    );
+
+    expect(webhookQueue.stats().dead).toBe(1);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(null, { status: 200 });
+
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: `/webhooks/queue/${item.id}/replay`,
+        headers: { "x-api-key": apiKey },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.processResult.delivered).toBe(1);
+      expect(webhookQueue.stats().total).toBe(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("rejects replay for pending queue items", async () => {
+    const now = new Date("2026-07-04T10:00:00.000Z");
+    const item = webhookQueue.enqueue(
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "Pending",
+        email: "pending@example.com",
+        source: "landing",
+        createdAt: now.toISOString(),
+      },
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, error: "failed" },
+      now,
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/webhooks/queue/${item.id}/replay`,
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("QUEUE_ITEM_NOT_DEAD");
+  });
 });
 
 describe("POST /leads webhook retry queue", () => {

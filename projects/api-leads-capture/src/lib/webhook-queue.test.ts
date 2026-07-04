@@ -96,6 +96,45 @@ describe("WebhookQueueStore", () => {
     expect(store.stats()).toEqual({ pending: 0, dead: 1, total: 1 });
   });
 
+  it("replays dead-letter items back into the pending queue", () => {
+    const store = new WebhookQueueStore({ maxAttempts: 2 });
+    const now = new Date("2026-07-04T10:00:00.000Z");
+
+    const item = store.enqueue(
+      sampleLead,
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, error: "timeout" },
+      now,
+    );
+
+    store.recordFailure(
+      item.id,
+      { delivered: false, error: "timeout again" },
+      now,
+    );
+
+    const replayed = store.replayDeadLetter(item.id, now);
+    expect(replayed.status).toBe("pending");
+    expect(replayed.attempts).toBe(0);
+    expect(replayed.nextRetryAt).toBe(now.toISOString());
+    expect(store.stats()).toEqual({ pending: 1, dead: 0, total: 1 });
+  });
+
+  it("throws when replaying a missing or non-dead item", () => {
+    const store = new WebhookQueueStore({ maxAttempts: 2 });
+    const now = new Date("2026-07-04T10:00:00.000Z");
+
+    const item = store.enqueue(
+      sampleLead,
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, error: "timeout" },
+      now,
+    );
+
+    expect(() => store.replayDeadLetter("missing-id")).toThrow(/not found/);
+    expect(() => store.replayDeadLetter(item.id)).toThrow(/not dead/);
+  });
+
   it("returns only pending items that are due", () => {
     const store = new WebhookQueueStore({ maxAttempts: 5 });
     const now = new Date("2026-07-04T10:00:00.000Z");
