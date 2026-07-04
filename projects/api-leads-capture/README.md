@@ -13,6 +13,9 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
+- Failed webhook deliveries queued with exponential backoff retries
+- Background worker processes the retry queue on an interval
+- `GET /webhooks/queue` — inspect pending and dead webhook deliveries (API key required)
 
 ## Quick start
 
@@ -33,6 +36,9 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `LEADS_FILE`     | Path to JSON leads store (default `data/leads.json`) |
 | `WEBHOOK_URL`    | Optional URL notified on each new lead           |
 | `WEBHOOK_SECRET` | Optional HMAC secret for webhook signatures      |
+| `WEBHOOK_QUEUE_FILE` | Path to webhook retry queue JSON (default `data/webhook-queue.json`) |
+| `WEBHOOK_MAX_ATTEMPTS` | Max delivery attempts before marking dead (default `5`) |
+| `WEBHOOK_WORKER_INTERVAL_MS` | Retry worker poll interval in ms (default `30000`) |
 | `RATE_LIMIT_MAX` | Max `POST /leads` requests per IP per window (default `10`) |
 | `RATE_LIMIT_WINDOW_MS` | Rate limit window in ms (default `60000`) |
 | `HONEYPOT_FIELD` | Hidden form field name bots should leave empty (default `website`) |
@@ -100,6 +106,12 @@ When `WEBHOOK_URL` is set, each new lead triggers:
 
 If `WEBHOOK_SECRET` is set, the request includes `x-webhook-signature` (HMAC-SHA256 of the JSON body).
 
+When delivery fails, the lead is still stored and the webhook is queued for retry (1 min, 5 min, 15 min, 60 min backoff). After `WEBHOOK_MAX_ATTEMPTS` failures the item is marked dead.
+
+### `GET /webhooks/queue`
+
+Requires API key. Returns queue stats and pending/dead items when `WEBHOOK_URL` is configured.
+
 ## Scripts
 
 | Command        | Description              |
@@ -123,5 +135,5 @@ curl http://localhost:3001/leads \
 
 ## Next steps
 
-- Retry failed webhook deliveries with a queue
 - Optional Supabase sync for multi-instance deploys
+- Manual replay endpoint for dead-letter webhook items

@@ -77,6 +77,18 @@ export async function registerLeadRoutes(
             { leadId: lead.id, webhookResult },
             "Lead stored but webhook delivery failed",
           );
+
+          if (config.webhookQueue) {
+            const queued = config.webhookQueue.enqueue(
+              lead,
+              config.webhook,
+              webhookResult,
+            );
+            request.log.info(
+              { leadId: lead.id, queueItemId: queued.id, nextRetryAt: queued.nextRetryAt },
+              "Webhook queued for retry",
+            );
+          }
         }
       }
 
