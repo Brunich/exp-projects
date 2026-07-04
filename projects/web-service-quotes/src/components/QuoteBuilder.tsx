@@ -1,24 +1,42 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { QuoteDraft, ServiceTemplate } from "@/lib/types";
 import {
   calculateQuoteTotals,
-  createEmptyQuote,
   createLineItem,
   formatCurrency,
 } from "@/lib/quote";
+import { useQuoteDraft } from "@/lib/use-quote-draft";
 import { QuotePreview } from "./QuotePreview";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
 
-export function QuoteBuilder() {
-  const [quote, setQuote] = useState<QuoteDraft>(() => createEmptyQuote());
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
+interface QuoteBuilderProps {
+  savedQuoteId?: string;
+  startFresh?: boolean;
+}
+
+export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
+  const {
+    quote,
+    selectedTemplateId,
+    savedQuoteId: currentSavedId,
+    hydrated,
+    saveMessage,
+    updateDraft,
+    setSelectedTemplateId,
+    saveQuote,
+    startNewQuote,
+  } = useQuoteDraft({ savedQuoteId, startFresh });
 
   const totals = useMemo(
     () => calculateQuoteTotals(quote.lineItems, quote.taxRatePercent),
     [quote.lineItems, quote.taxRatePercent],
   );
+
+  function setQuote(updater: (current: QuoteDraft) => QuoteDraft) {
+    updateDraft(updater);
+  }
 
   function applyTemplate(template: ServiceTemplate) {
     setSelectedTemplateId(template.id);
@@ -61,8 +79,50 @@ export function QuoteBuilder() {
     }));
   }
 
+  if (!hydrated) {
+    return (
+      <p className="text-sm text-zinc-500" role="status">
+        Loading quote…
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 no-print">
+        <div className="text-sm text-zinc-600">
+          {currentSavedId ? (
+            <span>
+              Editing saved quote{" "}
+              <span className="font-mono text-xs text-zinc-500">
+                {currentSavedId.slice(0, 8)}
+              </span>
+            </span>
+          ) : (
+            <span>Draft auto-saves as you type</span>
+          )}
+          {saveMessage ? (
+            <span className="ml-2 font-medium text-emerald-700">{saveMessage}</span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={startNewQuote}
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-white"
+          >
+            New quote
+          </button>
+          <button
+            type="button"
+            onClick={saveQuote}
+            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            Save quote
+          </button>
+        </div>
+      </div>
+
       <ServiceTemplatePicker
         selectedId={selectedTemplateId}
         onSelect={applyTemplate}

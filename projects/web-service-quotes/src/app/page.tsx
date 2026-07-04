@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SavedQuotesList } from "@/components/SavedQuotesList";
 
 export default function Home() {
   return (
@@ -7,7 +8,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <p className="font-semibold text-zinc-900">Service Quote Builder</p>
           <Link
-            href="/quotes/new"
+            href="/quotes/new?fresh=1"
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
           >
             New quote
@@ -38,7 +39,7 @@ export default function Home() {
           </div>
         </div>
 
-        <section className="mt-16 grid gap-4 sm:grid-cols-3">
+        <section className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               title: "Templates",
@@ -52,6 +53,10 @@ export default function Home() {
               title: "Print ready",
               body: "One-click print layout you can save as PDF and send.",
             },
+            {
+              title: "Saved locally",
+              body: "Drafts auto-save in your browser and saved quotes stay on this device.",
+            },
           ].map((item) => (
             <article
               key={item.title}
@@ -62,6 +67,8 @@ export default function Home() {
             </article>
           ))}
         </section>
+
+        <SavedQuotesList />
       </main>
     </div>
   );

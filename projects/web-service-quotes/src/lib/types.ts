@@ -32,3 +32,21 @@ export interface QuoteTotals {
   tax: number;
   total: number;
 }
+
+export interface SavedQuote {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  clientName: string;
+  projectTitle: string;
+  validUntil: string;
+  taxRatePercent: number;
+  lineItems: QuoteLineItem[];
+  templateId?: string;
+}
+
+export interface QuoteDraftState {
+  draft: QuoteDraft;
+  selectedTemplateId?: string;
+  savedQuoteId?: string;
+}

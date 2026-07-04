@@ -9,6 +9,8 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Quote builder with editable line items, tax rate, and validity date
 - Live subtotal, tax, and total calculations
 - Print-ready preview (save as PDF via browser print)
+- Draft auto-save in browser local storage while editing
+- Explicit save to a local quote library with resume/edit from home
 
 ## Quick start
 
@@ -35,12 +37,24 @@ Open [http://localhost:3000](http://localhost:3000) and click **New quote**.
 ```
 src/
   app/
-    quotes/new/     # Quote builder page
-  components/       # QuoteBuilder, QuotePreview, ServiceTemplatePicker
+    quotes/new/       # New quote (resume draft or ?fresh=1)
+    quotes/[id]/      # Edit a saved quote
+  components/         # QuoteBuilder, QuotePreview, SavedQuotesList
   lib/
-    templates.ts    # Service template catalog
-    quote.ts        # Totals and formatting helpers
+    templates.ts      # Service template catalog
+    quote.ts          # Totals and formatting helpers
+    quote-storage.ts  # Local storage parse/save helpers
+    use-quote-draft.ts
 ```
+
+## Local storage
+
+| Key | Purpose |
+| --- | ------- |
+| `service-quotes:draft` | In-progress draft (auto-saved) |
+| `service-quotes:saved` | Saved quote library |
+
+Saved quotes stay on the current browser/device. Use **Save quote** in the builder to add or update the library. The home page lists saved quotes; click one to resume editing.
 
 ## Environment
 
@@ -51,6 +65,6 @@ src/
 
 ## Next steps
 
-- Persist quotes to local storage or API
-- Custom template editor for each business
 - Branded PDF export with logo upload
+- Custom template editor for each business
+- Cloud sync API for multi-device access
