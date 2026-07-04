@@ -8,6 +8,7 @@ import {
   formatCurrency,
 } from "@/lib/quote";
 import { useQuoteDraft } from "@/lib/use-quote-draft";
+import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuotePreview } from "./QuotePreview";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
 
@@ -267,13 +268,21 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-zinc-900">Print preview</h2>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 no-print"
-        >
-          Print / Save as PDF
-        </button>
+        <div className="flex flex-wrap gap-2 no-print">
+          <DownloadQuotePdfButton
+            quote={quote}
+            quoteId={currentSavedId}
+            businessName={process.env.NEXT_PUBLIC_BUSINESS_NAME}
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            Print
+          </button>
+        </div>
       </div>
 
       <QuotePreview quote={quote} />
