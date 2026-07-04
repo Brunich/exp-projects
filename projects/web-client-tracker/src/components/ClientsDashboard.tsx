@@ -149,6 +149,17 @@ export function ClientsDashboard() {
         >
           Archived ({archivedClients.length})
         </button>
+        {showArchived && archivedClients.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              window.location.assign("/api/clients/export?scope=archived");
+            }}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Export CSV
+          </button>
+        ) : null}
       </div>
 
       {!showArchived && overdue.length > 0 ? (

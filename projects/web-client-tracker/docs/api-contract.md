@@ -94,6 +94,23 @@ Permanently removes a client (typically from the archived list).
 
 **Response `200`**: `{ "data": { "id": "uuid" } }`
 
+### `GET /clients/export?scope=archived`
+
+Downloads archived clients as a CSV file.
+
+**Query params**
+
+- `scope` — must be `archived`
+
+**Response `200`**
+
+- `Content-Type: text/csv; charset=utf-8`
+- `Content-Disposition: attachment; filename="archived-clients-YYYY-MM-DD.csv"`
+
+Columns: `id`, `name`, `company`, `email`, `status`, `next_follow_up`, `notes`, `archived_at`.
+
+Returns a header-only CSV when no archived clients exist.
+
 ## Validation rules
 
 - `status` must be one of the enum values used in `src/lib/types.ts`.

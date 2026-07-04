@@ -13,6 +13,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - Add and edit clients with form validation
 - Archive clients with restore and permanent delete
 - Active / archived tabs with confirmation dialogs
+- Export archived clients as CSV download
 
 ## Quick start
 
@@ -74,6 +75,7 @@ All `/api/clients` routes require an active session cookie (log in first).
 - `POST /api/clients` — create client
 - `PATCH /api/clients/:id` — update, archive (`{ "action": "archive" }`), or restore (`{ "action": "restore" }`)
 - `DELETE /api/clients/:id` — permanent delete
+- `GET /api/clients/export?scope=archived` — download archived clients as CSV
 
 See `docs/api-contract.md` for request/response shapes.
 
@@ -85,6 +87,6 @@ See `docs/api-contract.md` for request/response shapes.
 
 ## Next steps
 
-- Export archived clients as CSV
 - Add bulk archive actions
 - Replace file store with Supabase or Postgres for multi-instance deploys
+- Email reminders for overdue follow-ups
