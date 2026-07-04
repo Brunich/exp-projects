@@ -7,6 +7,8 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 ## Features
 
 - `POST /leads` — public endpoint for form submissions with Zod validation
+- Honeypot field check (`website` by default) silently rejects bots with a decoy 201
+- Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
 - `GET /leads` — list stored leads (API key required)
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
@@ -31,12 +33,15 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `LEADS_FILE`     | Path to JSON leads store (default `data/leads.json`) |
 | `WEBHOOK_URL`    | Optional URL notified on each new lead           |
 | `WEBHOOK_SECRET` | Optional HMAC secret for webhook signatures      |
+| `RATE_LIMIT_MAX` | Max `POST /leads` requests per IP per window (default `10`) |
+| `RATE_LIMIT_WINDOW_MS` | Rate limit window in ms (default `60000`) |
+| `HONEYPOT_FIELD` | Hidden form field name bots should leave empty (default `website`) |
 
 ## API
 
 ### `POST /leads`
 
-No auth required — intended for public forms protected by rate limiting at the edge.
+No auth required — intended for public forms. Add a hidden honeypot field (leave empty) and rely on rate limiting for abuse control.
 
 ```json
 {
@@ -44,7 +49,21 @@ No auth required — intended for public forms protected by rate limiting at the
   "email": "jane@example.com",
   "company": "Acme",
   "message": "Interested in pricing",
-  "source": "landing"
+  "source": "landing",
+  "website": ""
+}
+```
+
+The `website` field is the default honeypot. If a bot fills it, the API returns `201` with a fake lead id but does not store the submission.
+
+**Rate limit exceeded (`429`)**
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too many lead submissions. Try again in 42 seconds."
+  }
 }
 ```
 
@@ -104,6 +123,5 @@ curl http://localhost:3001/leads \
 
 ## Next steps
 
-- Add rate limiting and honeypot field validation
 - Retry failed webhook deliveries with a queue
 - Optional Supabase sync for multi-instance deploys

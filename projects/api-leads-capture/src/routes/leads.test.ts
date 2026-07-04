@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { buildApp } from "../app.js";
+import { buildApp, defaultAppConfig } from "../app.js";
 import { LeadStore } from "../lib/storage.js";
 
 describe("lead routes", () => {
@@ -10,7 +10,13 @@ describe("lead routes", () => {
 
   beforeAll(async () => {
     store.clear();
-    app = buildApp({ apiKey, store });
+    app = await buildApp(
+      defaultAppConfig({
+        apiKey,
+        store,
+        rateLimit: { max: 1000, windowMs: 60_000 },
+      }),
+    );
     await app.ready();
   });
 
@@ -59,5 +65,89 @@ describe("lead routes", () => {
 
     expect(authorized.statusCode).toBe(200);
     expect(authorized.json().data.length).toBeGreaterThan(0);
+  });
+
+  it("accepts submissions with an empty honeypot field", async () => {
+    const beforeCount = store.count();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Real User",
+        email: "real@example.com",
+        website: "",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(store.count()).toBe(beforeCount + 1);
+  });
+
+  it("returns decoy success when honeypot is filled without storing", async () => {
+    const beforeCount = store.count();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Bot User",
+        email: "bot@spam.com",
+        website: "https://spam.example",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().data.email).toBe("bot@spam.com");
+    expect(store.count()).toBe(beforeCount);
+  });
+});
+
+describe("POST /leads rate limiting", () => {
+  let app: FastifyInstance;
+  const store = new LeadStore();
+
+  beforeAll(async () => {
+    store.clear();
+    app = await buildApp(
+      defaultAppConfig({
+        apiKey: "test-api-key",
+        store,
+        rateLimit: { max: 2, windowMs: 60_000 },
+      }),
+    );
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 429 after exceeding the configured limit", async () => {
+    const payload = {
+      name: "Rate Test",
+      email: "rate@example.com",
+    };
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload,
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: { ...payload, email: "rate2@example.com" },
+    });
+    const third = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: { ...payload, email: "rate3@example.com" },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(201);
+    expect(third.statusCode).toBe(429);
+    expect(third.json().error.code).toBe("RATE_LIMITED");
   });
 });

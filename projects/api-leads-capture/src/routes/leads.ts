@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import type { AppConfig } from "../app.js";
 import { isAuthorized } from "../lib/auth.js";
+import {
+  buildDecoyLeadResponse,
+  isHoneypotTriggered,
+} from "../lib/honeypot.js";
 import { validateLeadInput } from "../lib/validation.js";
 import { notifyLeadWebhook } from "../lib/webhook.js";
 import type { ApiErrorBody } from "../types.js";
@@ -24,10 +29,10 @@ function unauthorizedError(): ApiErrorBody {
   };
 }
 
-export function registerLeadRoutes(
+export async function registerLeadRoutes(
   app: FastifyInstance,
   config: AppConfig,
-): void {
+): Promise<void> {
   app.get("/leads", async (request, reply) => {
     if (!isAuthorized(request, config.apiKey)) {
       return reply.status(401).send(unauthorizedError());
@@ -36,25 +41,46 @@ export function registerLeadRoutes(
     return reply.send({ data: config.store.list() });
   });
 
-  app.post("/leads", async (request, reply) => {
-    const validation = validateLeadInput(request.body);
+  await app.register(async (scoped) => {
+    await scoped.register(rateLimit, {
+      max: config.rateLimit.max,
+      timeWindow: config.rateLimit.windowMs,
+      hook: "preHandler",
+      keyGenerator: (request) => request.ip,
+      errorResponseBuilder: (_request, context) => ({
+        statusCode: 429,
+        error: {
+          code: "RATE_LIMITED",
+          message: `Too many lead submissions. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+        },
+      }),
+    });
 
-    if (!validation.ok) {
-      return reply.status(400).send(validationError(validation.details));
-    }
-
-    const lead = config.store.create(validation.data);
-
-    if (config.webhook?.url) {
-      const webhookResult = await notifyLeadWebhook(lead, config.webhook);
-      if (!webhookResult.delivered) {
-        request.log.warn(
-          { leadId: lead.id, webhookResult },
-          "Lead stored but webhook delivery failed",
-        );
+    scoped.post("/leads", async (request, reply) => {
+      if (isHoneypotTriggered(request.body, config.honeypotField)) {
+        request.log.info("Honeypot triggered; returning decoy response");
+        return reply.status(201).send(buildDecoyLeadResponse(request.body));
       }
-    }
 
-    return reply.status(201).send({ data: lead });
+      const validation = validateLeadInput(request.body);
+
+      if (!validation.ok) {
+        return reply.status(400).send(validationError(validation.details));
+      }
+
+      const lead = config.store.create(validation.data);
+
+      if (config.webhook?.url) {
+        const webhookResult = await notifyLeadWebhook(lead, config.webhook);
+        if (!webhookResult.delivered) {
+          request.log.warn(
+            { leadId: lead.id, webhookResult },
+            "Lead stored but webhook delivery failed",
+          );
+        }
+      }
+
+      return reply.status(201).send({ data: lead });
+    });
   });
 }
