@@ -9,6 +9,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Quote builder with editable line items, tax rate, and validity date
 - Live subtotal, tax, and total calculations
 - One-click PDF download for completed quotes (client, title, and line items required)
+- Branded PDF export with optional logo upload and business name override
 - Print-ready preview (browser print for quick copies)
 - Draft auto-save in browser local storage while editing
 - Explicit save to a local quote library with resume/edit from home
@@ -46,6 +47,7 @@ src/
     templates.ts      # Service template catalog
     quote.ts          # Totals and formatting helpers
     quote-pdf.ts      # PDF filename, validation, and generation
+    brand-settings.ts # Logo upload validation and local branding storage
     quote-storage.ts  # Local storage parse/save helpers
     use-quote-draft.ts
 ```
@@ -56,12 +58,13 @@ src/
 | --- | ------- |
 | `service-quotes:draft` | In-progress draft (auto-saved) |
 | `service-quotes:saved` | Saved quote library |
+| `service-quotes:brand` | Logo and business name for PDF exports |
 
 Saved quotes stay on the current browser/device. Use **Save quote** in the builder to add or update the library. The home page lists saved quotes; click one to resume editing, use **PDF** to download a copy, or **Delete** to remove a quote from this device.
 
 ## PDF export
 
-**Download PDF** is enabled when a quote has a client name, project title, valid-until date, and at least one line item with a description and quantity. PDFs use `NEXT_PUBLIC_BUSINESS_NAME` on the header when set.
+**Download PDF** is enabled when a quote has a client name, project title, valid-until date, and at least one line item with a description and quantity. PDFs use your uploaded logo and business name from the quote builder (or `NEXT_PUBLIC_BUSINESS_NAME` as a fallback).
 
 ## Environment
 
@@ -72,6 +75,5 @@ Saved quotes stay on the current browser/device. Use **Save quote** in the build
 
 ## Next steps
 
-- Branded PDF export with logo upload
 - Custom template editor for each business
 - Cloud sync API for multi-device access

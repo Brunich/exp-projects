@@ -5,6 +5,8 @@ import {
   downloadQuotePdf,
   getQuoteExportReadiness,
 } from "@/lib/quote-pdf";
+import { resolveBusinessName } from "@/lib/brand-settings";
+import { useBrandSettings } from "@/lib/use-brand-settings";
 import type { QuoteDraft } from "@/lib/types";
 
 interface DownloadQuotePdfButtonProps {
@@ -23,7 +25,9 @@ export function DownloadQuotePdfButton({
   label = "Download PDF",
 }: DownloadQuotePdfButtonProps) {
   const [error, setError] = useState<string | null>(null);
+  const { settings } = useBrandSettings();
   const readiness = useMemo(() => getQuoteExportReadiness(quote), [quote]);
+  const resolvedBusinessName = resolveBusinessName(settings, businessName);
 
   function handleDownload() {
     if (!readiness.ready) {
@@ -33,7 +37,8 @@ export function DownloadQuotePdfButton({
 
     setError(null);
     downloadQuotePdf(quote, {
-      businessName,
+      businessName: resolvedBusinessName,
+      logoDataUrl: settings.logoDataUrl,
       quoteId,
     });
   }

@@ -65,6 +65,9 @@ describe("buildQuotePdfFilename", () => {
 });
 
 describe("generateQuotePdf", () => {
+  const tinyPng =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
   it("returns a non-empty PDF blob", () => {
     const blob = generateQuotePdf(exportableQuote, {
       businessName: "Green Lawn Co.",
@@ -72,6 +75,17 @@ describe("generateQuotePdf", () => {
     });
 
     expect(blob).toBeInstanceOf(Blob);
+    expect(blob.type).toBe("application/pdf");
+    expect(blob.size).toBeGreaterThan(500);
+  });
+
+  it("includes a logo without failing generation", () => {
+    const blob = generateQuotePdf(exportableQuote, {
+      businessName: "Green Lawn Co.",
+      issuedOn: "2026-07-04",
+      logoDataUrl: tinyPng,
+    });
+
     expect(blob.type).toBe("application/pdf");
     expect(blob.size).toBeGreaterThan(500);
   });

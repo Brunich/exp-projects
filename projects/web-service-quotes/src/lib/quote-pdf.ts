@@ -1,11 +1,13 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getImageFormatFromDataUrl } from "./brand-settings";
 import { calculateQuoteTotals, formatCurrency } from "./quote";
 import type { QuoteDraft, QuoteLineItem } from "./types";
 
 export interface QuotePdfOptions {
   businessName?: string;
   issuedOn?: string;
+  logoDataUrl?: string;
 }
 
 export interface QuoteExportReadiness {
@@ -54,6 +56,29 @@ export function buildQuotePdfFilename(
   return `${slug || "service-quote"}${suffix}.pdf`;
 }
 
+function drawPdfLogo(
+  doc: jsPDF,
+  logoDataUrl: string,
+  rightX: number,
+  topY: number,
+): number {
+  const format = getImageFormatFromDataUrl(logoDataUrl);
+  if (!format) {
+    return topY;
+  }
+
+  const maxWidth = 96;
+  const maxHeight = 40;
+  const props = doc.getImageProperties(logoDataUrl);
+  const scale = Math.min(maxWidth / props.width, maxHeight / props.height);
+  const width = props.width * scale;
+  const height = props.height * scale;
+  const x = rightX - width;
+
+  doc.addImage(logoDataUrl, format, x, topY, width, height);
+  return topY + height + 8;
+}
+
 export function generateQuotePdf(
   quote: QuoteDraft,
   options: QuotePdfOptions = {},
@@ -82,13 +107,21 @@ export function generateQuotePdf(
   doc.text(`Prepared for ${quote.clientName.trim() || "Client name"}`, margin, y);
 
   const rightX = doc.internal.pageSize.getWidth() - margin;
+  let headerRightY = margin;
+
+  if (options.logoDataUrl) {
+    headerRightY = drawPdfLogo(doc, options.logoDataUrl, rightX, margin);
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setTextColor(24);
-  doc.text(businessName, rightX, margin, { align: "right" });
+  doc.text(businessName, rightX, headerRightY, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.setTextColor(80);
-  doc.text(`Issued ${issuedOn}`, rightX, margin + 16, { align: "right" });
-  doc.text(`Valid until ${quote.validUntil}`, rightX, margin + 32, { align: "right" });
+  doc.text(`Issued ${issuedOn}`, rightX, headerRightY + 16, { align: "right" });
+  doc.text(`Valid until ${quote.validUntil}`, rightX, headerRightY + 32, {
+    align: "right",
+  });
 
   const tableBody = quote.lineItems.map((item) => [
     item.description.trim() || "—",

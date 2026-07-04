@@ -9,7 +9,10 @@ import {
   formatCurrency,
 } from "@/lib/quote";
 import { useQuoteDraft } from "@/lib/use-quote-draft";
+import { resolveBusinessName } from "@/lib/brand-settings";
+import { useBrandSettings } from "@/lib/use-brand-settings";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { BrandLogoUpload } from "./BrandLogoUpload";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuotePreview } from "./QuotePreview";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
@@ -34,6 +37,11 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
     startNewQuote,
     deleteQuote,
   } = useQuoteDraft({ savedQuoteId, startFresh });
+  const { settings } = useBrandSettings();
+  const businessName = resolveBusinessName(
+    settings,
+    process.env.NEXT_PUBLIC_BUSINESS_NAME,
+  );
 
   const totals = useMemo(
     () => calculateQuoteTotals(quote.lineItems, quote.taxRatePercent),
@@ -144,6 +152,8 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
           </button>
         </div>
       </div>
+
+      <BrandLogoUpload envBusinessName={process.env.NEXT_PUBLIC_BUSINESS_NAME} />
 
       <ServiceTemplatePicker
         selectedId={selectedTemplateId}
@@ -293,7 +303,7 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
           <DownloadQuotePdfButton
             quote={quote}
             quoteId={currentSavedId}
-            businessName={process.env.NEXT_PUBLIC_BUSINESS_NAME}
+            businessName={businessName}
             className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
           />
           <button
@@ -306,7 +316,11 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
         </div>
       </div>
 
-      <QuotePreview quote={quote} />
+      <QuotePreview
+        quote={quote}
+        businessName={businessName}
+        logoDataUrl={settings.logoDataUrl}
+      />
 
       {showDeleteConfirm ? (
         <ConfirmDialog

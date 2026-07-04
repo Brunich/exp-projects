@@ -4,11 +4,13 @@ import { calculateQuoteTotals, formatCurrency } from "@/lib/quote";
 interface QuotePreviewProps {
   quote: QuoteDraft;
   businessName?: string;
+  logoDataUrl?: string;
 }
 
 export function QuotePreview({
   quote,
   businessName = "Your Service Co.",
+  logoDataUrl,
 }: QuotePreviewProps) {
   const totals = calculateQuoteTotals(quote.lineItems, quote.taxRatePercent);
   const issuedOn = new Date().toISOString().slice(0, 10);
@@ -31,6 +33,14 @@ export function QuotePreview({
           </p>
         </div>
         <div className="text-sm text-zinc-600 sm:text-right">
+          {logoDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoDataUrl}
+              alt=""
+              className="ml-auto mb-2 max-h-12 max-w-32 object-contain"
+            />
+          ) : null}
           <p className="font-semibold text-zinc-900">{businessName}</p>
           <p className="mt-1">Issued {issuedOn}</p>
           <p>Valid until {quote.validUntil}</p>
