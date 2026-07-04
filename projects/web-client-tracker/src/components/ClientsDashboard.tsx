@@ -1,15 +1,8 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import type { Client } from "@/lib/types";
 import type { ClientFormInput } from "@/lib/client-validation";
-import {
-  archiveClient,
-  buildClientFromForm,
-  deleteClient,
-  restoreClient,
-  upsertClient,
-} from "@/lib/client-storage";
 import {
   filterActiveClients,
   filterArchivedClients,
@@ -26,17 +19,18 @@ type PendingAction =
   | { type: "archive"; client: Client }
   | { type: "delete"; client: Client };
 
-function useIsHydrated() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
-}
-
 export function ClientsDashboard() {
-  const { clients, persist } = useClientStorage();
-  const isHydrated = useIsHydrated();
+  const {
+    clients,
+    loading,
+    error,
+    mutating,
+    addClient,
+    editClient,
+    archiveClient,
+    restoreClient,
+    removeClient,
+  } = useClientStorage();
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -63,13 +57,11 @@ export function ClientsDashboard() {
     setEditingClient(null);
   }
 
-  function handleSubmit(input: ClientFormInput) {
+  async function handleSubmit(input: ClientFormInput) {
     if (formMode === "create") {
-      const created = buildClientFromForm(input, crypto.randomUUID());
-      persist(upsertClient(clients, created));
+      await addClient(input);
     } else if (formMode === "edit" && editingClient) {
-      const updated = buildClientFromForm(input, editingClient.id);
-      persist(upsertClient(clients, updated));
+      await editClient(editingClient.id, input);
     }
 
     closeForm();
@@ -83,23 +75,23 @@ export function ClientsDashboard() {
     setPendingAction({ type: "delete", client });
   }
 
-  function handleRestore(client: Client) {
-    persist(restoreClient(clients, client.id));
+  async function handleRestore(client: Client) {
+    await restoreClient(client.id);
   }
 
-  function confirmPendingAction() {
+  async function confirmPendingAction() {
     if (!pendingAction) return;
 
     if (pendingAction.type === "archive") {
-      persist(archiveClient(clients, pendingAction.client.id));
+      await archiveClient(pendingAction.client.id);
     } else {
-      persist(deleteClient(clients, pendingAction.client.id));
+      await removeClient(pendingAction.client.id);
     }
 
     setPendingAction(null);
   }
 
-  if (!isHydrated) {
+  if (loading) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-500 shadow-sm">
         Loading clients…
@@ -120,12 +112,19 @@ export function ClientsDashboard() {
           <button
             type="button"
             onClick={openCreateForm}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            disabled={mutating}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
           >
             Add client
           </button>
         ) : null}
       </div>
+
+      {error ? (
+        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+          <p className="text-sm font-medium text-rose-800">{error}</p>
+        </section>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -170,12 +169,14 @@ export function ClientsDashboard() {
           showArchived
           onRestore={handleRestore}
           onDelete={handleDelete}
+          disabled={mutating}
         />
       ) : (
         <ClientTable
           clients={activeClients}
           onEdit={openEditForm}
           onArchive={handleArchive}
+          disabled={mutating}
         />
       )}
 

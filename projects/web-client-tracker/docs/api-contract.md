@@ -1,22 +1,29 @@
 # Client Tracker API Contract
 
-Draft contract for a future backend that will replace the in-memory sample data.
+Implemented by the Next.js app at `/api/clients`. Requires an active session cookie from the demo login.
 
 ## Base URL
 
 ```
-https://api.example.com/v1
+http://localhost:3000/api
 ```
+
+In production, use your deployed app URL with the same path prefix.
 
 ## Authentication
 
-All endpoints require a bearer token issued after login.
+All endpoints require a valid session cookie (`fct_session`) set after login.
 
-```
-Authorization: Bearer <access_token>
-```
+Unauthenticated requests return `401`:
 
-The current web app uses a cookie-based demo session. When integrating a real API, swap `src/lib/auth.ts` for token storage and attach the header on fetch calls.
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Login required"
+  }
+}
+```
 
 ## Endpoints
 
@@ -59,21 +66,43 @@ Creates a client record.
 }
 ```
 
-**Response `201`**: created client object.
+**Response `201`**: `{ "data": { ...created client } }`
 
 ### `PATCH /clients/:id`
 
-Partial update for status, follow-up date, or notes.
+Partial update for client fields, or archive/restore via action.
+
+**Update body** — same shape as `POST /clients`.
+
+**Archive body**
+
+```json
+{ "action": "archive" }
+```
+
+**Restore body**
+
+```json
+{ "action": "restore" }
+```
+
+**Response `200`**: `{ "data": { ...updated client } }`
 
 ### `DELETE /clients/:id`
 
-Soft-delete or archive a client.
+Permanently removes a client (typically from the archived list).
+
+**Response `200`**: `{ "data": { "id": "uuid" } }`
 
 ## Validation rules
 
 - `status` must be one of the enum values used in `src/lib/types.ts`.
 - `nextFollowUp` must be a valid ISO date string (`YYYY-MM-DD`).
 - `email` must be a valid email address.
+
+## Persistence
+
+Clients are stored in a JSON file on disk (`CLIENTS_FILE`, default `data/clients.json`). The file is created with sample data on first run.
 
 ## Webhook (future)
 
@@ -85,7 +114,10 @@ Soft-delete or archive a client.
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "nextFollowUp must be a future date for active leads"
+    "message": "Invalid client data",
+    "fields": {
+      "email": "Enter a valid email address"
+    }
   }
 }
 ```

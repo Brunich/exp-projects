@@ -22,6 +22,7 @@ const STATUS_OPTIONS: Array<{ value: ClientStatus | "all"; label: string }> = [
 interface ClientTableProps {
   clients: Client[];
   showArchived?: boolean;
+  disabled?: boolean;
   onEdit?: (client: Client) => void;
   onArchive?: (client: Client) => void;
   onRestore?: (client: Client) => void;
@@ -39,6 +40,7 @@ function formatFollowUpLabel(date: string): string {
 export function ClientTable({
   clients,
   showArchived = false,
+  disabled = false,
   onEdit,
   onArchive,
   onRestore,
@@ -160,8 +162,9 @@ export function ClientTable({
                               {onRestore ? (
                                 <button
                                   type="button"
+                                  disabled={disabled}
                                   onClick={() => onRestore(client)}
-                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
                                 >
                                   Restore
                                 </button>
@@ -169,8 +172,9 @@ export function ClientTable({
                               {onDelete ? (
                                 <button
                                   type="button"
+                                  disabled={disabled}
                                   onClick={() => onDelete(client)}
-                                  className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
+                                  className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
                                 >
                                   Delete
                                 </button>
@@ -181,8 +185,9 @@ export function ClientTable({
                               {onEdit ? (
                                 <button
                                   type="button"
+                                  disabled={disabled}
                                   onClick={() => onEdit(client)}
-                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
                                 >
                                   Edit
                                 </button>
@@ -190,8 +195,9 @@ export function ClientTable({
                               {onArchive ? (
                                 <button
                                   type="button"
+                                  disabled={disabled}
                                   onClick={() => onArchive(client)}
-                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50"
+                                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50 disabled:opacity-60"
                                 >
                                   Archive
                                 </button>

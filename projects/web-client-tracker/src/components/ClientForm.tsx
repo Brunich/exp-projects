@@ -23,7 +23,7 @@ const inputClassName =
 interface ClientFormProps {
   mode: "create" | "edit";
   initialValues?: Client;
-  onSubmit: (input: ClientFormInput) => void;
+  onSubmit: (input: ClientFormInput) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -49,6 +49,7 @@ export function ClientForm({
   );
   const [errors, setErrors] = useState<ClientFormErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   function handleChange<K extends keyof ClientFormInput>(
     field: K,
@@ -61,7 +62,7 @@ export function ClientForm({
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitted(true);
 
@@ -69,7 +70,12 @@ export function ClientForm({
     setErrors(nextErrors);
     if (!isValidClientForm(values)) return;
 
-    onSubmit(values);
+    setSubmitting(true);
+    try {
+      await onSubmit(values);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -175,7 +181,8 @@ export function ClientForm({
         </button>
         <button
           type="submit"
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+          disabled={submitting}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
         >
           {mode === "create" ? "Add client" : "Save changes"}
         </button>
