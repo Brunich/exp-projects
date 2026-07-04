@@ -22,7 +22,7 @@
       "type": "web",
       "title": "Service Quote Builder",
       "goal": "Generate PDF-ready quotes from service templates",
-      "status": "planned",
+      "status": "in_progress",
       "sellable_angle": "Local service providers"
     }
   ]
