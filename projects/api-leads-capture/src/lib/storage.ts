@@ -55,6 +55,27 @@ export class LeadStore {
     return this.leads.find((lead) => emailsMatch(lead.email, email));
   }
 
+  updateByEmail(email: string, input: LeadInput): Lead | undefined {
+    const index = this.leads.findIndex((lead) => emailsMatch(lead.email, email));
+    if (index === -1) {
+      return undefined;
+    }
+
+    const existing = this.leads[index]!;
+    const updated: Lead = {
+      ...existing,
+      name: input.name,
+      email: input.email,
+      company: input.company,
+      message: input.message,
+      source: input.source ?? existing.source,
+    };
+
+    this.leads[index] = updated;
+    this.persistToFile();
+    return updated;
+  }
+
   create(input: LeadInput): Lead {
     const lead: Lead = {
       id: randomUUID(),

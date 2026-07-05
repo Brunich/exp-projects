@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import type { LeadStore } from "./lib/storage.js";
+import type { LeadDedupMode } from "./lib/lead-dedup.js";
 import type { RateLimitConfig } from "./lib/rate-limit.js";
 import { DEFAULT_RATE_LIMIT } from "./lib/rate-limit.js";
 import type { WebhookConfig } from "./lib/webhook.js";
@@ -12,6 +13,7 @@ export interface AppConfig {
   store: LeadStore;
   webhook?: WebhookConfig;
   webhookQueue?: WebhookQueueStore;
+  leadDedupMode: LeadDedupMode;
   rateLimit: RateLimitConfig;
   honeypotField: string;
 }
@@ -32,12 +34,13 @@ export async function buildApp(config: AppConfig) {
 }
 
 export function defaultAppConfig(
-  partial: Omit<AppConfig, "rateLimit" | "honeypotField"> &
-    Partial<Pick<AppConfig, "rateLimit" | "honeypotField">>,
+  partial: Omit<AppConfig, "rateLimit" | "honeypotField" | "leadDedupMode"> &
+    Partial<Pick<AppConfig, "rateLimit" | "honeypotField" | "leadDedupMode">>,
 ): AppConfig {
   return {
     rateLimit: partial.rateLimit ?? DEFAULT_RATE_LIMIT,
     honeypotField: partial.honeypotField ?? "website",
+    leadDedupMode: partial.leadDedupMode ?? "ignore",
     ...partial,
   };
 }

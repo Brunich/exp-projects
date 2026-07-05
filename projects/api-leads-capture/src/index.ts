@@ -1,4 +1,5 @@
 import { buildApp, defaultAppConfig } from "./app.js";
+import { parseLeadDedupMode } from "./lib/lead-dedup.js";
 import { parseRateLimitConfig } from "./lib/rate-limit.js";
 import { LeadStore } from "./lib/storage.js";
 import {
@@ -41,6 +42,7 @@ const app = await buildApp(
     webhookQueue,
     rateLimit: parseRateLimitConfig(process.env),
     honeypotField,
+    leadDedupMode: parseLeadDedupMode(process.env.LEAD_DEDUP_MODE),
   }),
 );
 

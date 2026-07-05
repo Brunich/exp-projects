@@ -7,7 +7,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 ## Features
 
 - `POST /leads` — public endpoint for form submissions with Zod validation
-- Email deduplication on `POST /leads` — duplicate addresses return the existing lead without re-firing webhooks
+- Email deduplication on `POST /leads` — duplicate addresses return the existing lead without re-firing webhooks (or upsert name/message when `LEAD_DEDUP_MODE=upsert`)
 - Honeypot field check (`website` by default) silently rejects bots with a decoy 201
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
 - `GET /leads` — list stored leads with optional filters, pagination, and CSV export (API key required)
@@ -45,6 +45,7 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `RATE_LIMIT_MAX` | Max `POST /leads` requests per IP per window (default `10`) |
 | `RATE_LIMIT_WINDOW_MS` | Rate limit window in ms (default `60000`) |
 | `HONEYPOT_FIELD` | Hidden form field name bots should leave empty (default `website`) |
+| `LEAD_DEDUP_MODE` | Duplicate email handling: `ignore` (default) or `upsert` |
 
 ## API
 
@@ -98,6 +99,15 @@ The `website` field is the default honeypot. If a bot fills it, the API returns 
 {
   "data": { "...existing lead fields..." },
   "meta": { "duplicate": true }
+}
+```
+
+**Response `200`** (duplicate email with `LEAD_DEDUP_MODE=upsert` — lead refreshed, no webhook)
+
+```json
+{
+  "data": { "...updated lead fields..." },
+  "meta": { "duplicate": true, "updated": true }
 }
 ```
 

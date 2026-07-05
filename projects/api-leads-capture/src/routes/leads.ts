@@ -99,6 +99,23 @@ export async function registerLeadRoutes(
 
       const existing = config.store.findByEmail(validation.data.email);
       if (existing) {
+        if (config.leadDedupMode === "upsert") {
+          const updated = config.store.updateByEmail(
+            validation.data.email,
+            validation.data,
+          );
+
+          request.log.info(
+            { leadId: existing.id, email: existing.email },
+            "Duplicate lead submission upserted",
+          );
+
+          return reply.status(200).send({
+            data: updated,
+            meta: { duplicate: true, updated: true },
+          });
+        }
+
         request.log.info(
           { leadId: existing.id, email: existing.email },
           "Duplicate lead submission ignored",

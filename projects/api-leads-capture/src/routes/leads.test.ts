@@ -217,6 +217,68 @@ describe("lead routes", () => {
   });
 });
 
+describe("POST /leads upsert mode", () => {
+  let app: FastifyInstance;
+  const store = new LeadStore();
+
+  beforeAll(async () => {
+    store.clear();
+    app = await buildApp(
+      defaultAppConfig({
+        apiKey: "test-api-key",
+        store,
+        leadDedupMode: "upsert",
+        rateLimit: { max: 1000, windowMs: 60_000 },
+      }),
+    );
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("updates name and message when duplicate email is submitted", async () => {
+    const first = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Original Name",
+        email: "upsert-mode@example.com",
+        message: "First message",
+        source: "landing",
+      },
+    });
+
+    expect(first.statusCode).toBe(201);
+    const original = first.json().data;
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Updated Name",
+        email: "  UPSERT-MODE@example.com ",
+        message: "Updated message",
+        source: "ads",
+      },
+    });
+
+    expect(duplicate.statusCode).toBe(200);
+    const body = duplicate.json();
+    expect(body.meta).toEqual({ duplicate: true, updated: true });
+    expect(body.data).toMatchObject({
+      id: original.id,
+      createdAt: original.createdAt,
+      name: "Updated Name",
+      email: "upsert-mode@example.com",
+      message: "Updated message",
+      source: "ads",
+    });
+    expect(store.count()).toBe(1);
+  });
+});
+
 describe("POST /leads duplicate webhook behavior", () => {
   let app: FastifyInstance;
   const store = new LeadStore();

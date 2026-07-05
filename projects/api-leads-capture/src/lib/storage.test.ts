@@ -85,4 +85,32 @@ describe("LeadStore file persistence", () => {
     expect(store.findByEmail("ANA@EXAMPLE.COM")).toEqual(lead);
     expect(store.findByEmail("other@example.com")).toBeUndefined();
   });
+
+  it("updates an existing lead by email without changing id or createdAt", () => {
+    const store = new LeadStore();
+    const original = store.create({
+      name: "Original Name",
+      email: "upsert@example.com",
+      message: "First message",
+      source: "landing",
+    });
+
+    const updated = store.updateByEmail("  UPSERT@example.com ", {
+      name: "Updated Name",
+      email: "upsert@example.com",
+      message: "Updated message",
+      source: "referral",
+    });
+
+    expect(updated).toMatchObject({
+      id: original.id,
+      createdAt: original.createdAt,
+      name: "Updated Name",
+      email: "upsert@example.com",
+      message: "Updated message",
+      source: "referral",
+    });
+    expect(store.count()).toBe(1);
+    expect(store.findByEmail("upsert@example.com")?.name).toBe("Updated Name");
+  });
 });
