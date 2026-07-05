@@ -9,7 +9,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `POST /leads` — public endpoint for form submissions with Zod validation
 - Honeypot field check (`website` by default) silently rejects bots with a decoy 201
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
-- `GET /leads` — list stored leads (API key required)
+- `GET /leads` — list stored leads with optional filters and pagination (API key required)
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
@@ -94,6 +94,29 @@ The `website` field is the default honeypot. If a bot fills it, the API returns 
 ### `GET /leads`
 
 Requires `x-api-key: <API_KEY>` or `Authorization: Bearer <API_KEY>`.
+
+Optional query parameters:
+
+| Param    | Description                                              |
+| -------- | -------------------------------------------------------- |
+| `source` | Filter by source (`landing`, `referral`, `ads`, `other`) |
+| `q`      | Search name, email, company, or message (case-insensitive) |
+| `since`  | Only leads created on or after `YYYY-MM-DD`              |
+| `limit`  | Page size (1–100, default `50`)                        |
+| `offset` | Skip N matching leads (default `0`)                    |
+
+**Response `200`**
+
+```json
+{
+  "data": [{ "...lead fields..." }],
+  "meta": {
+    "total": 42,
+    "limit": 50,
+    "offset": 0
+  }
+}
+```
 
 ### Webhook payload
 
@@ -186,6 +209,9 @@ curl -X POST http://localhost:3001/leads \
 curl http://localhost:3001/leads \
   -H "x-api-key: dev-api-key-change-me"
 
+curl "http://localhost:3001/leads?source=landing&q=pricing&limit=20" \
+  -H "x-api-key: dev-api-key-change-me"
+
 curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAfter=2026-07-01T00:00:00.000Z" \
   -H "x-api-key: dev-api-key-change-me"
 ```
@@ -193,4 +219,4 @@ curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAf
 ## Next steps
 
 - Optional Supabase sync for multi-instance deploys
-- Admin dashboard for webhook queue inspection
+- Export leads as CSV from the list endpoint

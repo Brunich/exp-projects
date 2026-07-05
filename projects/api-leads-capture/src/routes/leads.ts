@@ -6,6 +6,7 @@ import {
   buildDecoyLeadResponse,
   isHoneypotTriggered,
 } from "../lib/honeypot.js";
+import { parseLeadListQuery } from "../lib/lead-filters.js";
 import { validateLeadInput } from "../lib/validation.js";
 import { notifyLeadWebhook } from "../lib/webhook.js";
 import type { ApiErrorBody } from "../types.js";
@@ -38,7 +39,21 @@ export async function registerLeadRoutes(
       return reply.status(401).send(unauthorizedError());
     }
 
-    return reply.send({ data: config.store.list() });
+    const parsed = parseLeadListQuery(
+      request.query as Record<string, unknown>,
+    );
+
+    if (!parsed.ok) {
+      return reply.status(400).send({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+          details: parsed.details,
+        },
+      });
+    }
+
+    return reply.send(config.store.list(parsed.query));
   });
 
   await app.register(async (scoped) => {

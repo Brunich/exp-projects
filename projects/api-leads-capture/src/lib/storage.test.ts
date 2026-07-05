@@ -28,7 +28,7 @@ describe("LeadStore file persistence", () => {
     expect(readFileSync(filePath, "utf-8")).toContain("ana@example.com");
 
     const reader = new LeadStore({ filePath });
-    const leads = reader.list();
+    const { data: leads } = reader.list();
 
     expect(leads).toHaveLength(1);
     expect(leads[0]).toMatchObject({

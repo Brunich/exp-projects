@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
+import { filterLeads, type LeadListQuery } from "./lead-filters.js";
 import type { Lead, LeadInput } from "../types.js";
 
 const leadSchema = z.object({
@@ -37,10 +38,12 @@ export class LeadStore {
     }
   }
 
-  list(): Lead[] {
-    return [...this.leads].sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt),
-    );
+  list(query?: LeadListQuery) {
+    if (!query) {
+      return filterLeads(this.leads, { limit: 50, offset: 0 });
+    }
+
+    return filterLeads(this.leads, query);
   }
 
   create(input: LeadInput): Lead {

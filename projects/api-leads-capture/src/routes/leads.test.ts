@@ -64,7 +64,59 @@ describe("lead routes", () => {
     });
 
     expect(authorized.statusCode).toBe(200);
-    expect(authorized.json().data.length).toBeGreaterThan(0);
+    const body = authorized.json();
+    expect(body.data.length).toBeGreaterThan(0);
+    expect(body.meta).toEqual({
+      total: body.data.length,
+      limit: 50,
+      offset: 0,
+    });
+  });
+
+  it("filters leads by source and search query", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Filter Test",
+        email: "filter@example.com",
+        source: "referral",
+      },
+    });
+
+    const bySource = await app.inject({
+      method: "GET",
+      url: "/leads?source=referral",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(bySource.statusCode).toBe(200);
+    expect(
+      bySource.json().data.every(
+        (lead: { source: string }) => lead.source === "referral",
+      ),
+    ).toBe(true);
+
+    const bySearch = await app.inject({
+      method: "GET",
+      url: "/leads?q=filter@example.com",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(bySearch.statusCode).toBe(200);
+    expect(bySearch.json().data).toHaveLength(1);
+    expect(bySearch.json().data[0].email).toBe("filter@example.com");
+  });
+
+  it("returns 400 for invalid list query params", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/leads?source=invalid&limit=0",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("VALIDATION_ERROR");
   });
 
   it("accepts submissions with an empty honeypot field", async () => {
