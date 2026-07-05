@@ -114,3 +114,36 @@ export async function bulkRestoreClients(ids: string[]): Promise<BulkActionResul
   });
   return parseResponse<BulkActionResult>(response);
 }
+
+export interface ReminderDraftsResponse {
+  drafts: import("./email-reminders").ReminderEmailDraft[];
+  smtpConfigured: boolean;
+  overdueCount: number;
+}
+
+export interface SendRemindersResult {
+  results: Array<{
+    clientId: string;
+    to: string;
+    sent: boolean;
+    error?: string;
+  }>;
+  sentCount: number;
+  failedCount: number;
+}
+
+export async function fetchReminderDrafts(): Promise<ReminderDraftsResponse> {
+  const response = await fetch("/api/clients/reminders", { cache: "no-store" });
+  return parseResponse<ReminderDraftsResponse>(response);
+}
+
+export async function sendReminderEmails(
+  ids?: string[],
+): Promise<SendRemindersResult> {
+  const response = await fetch("/api/clients/reminders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(ids ? { ids } : {}),
+  });
+  return parseResponse<SendRemindersResult>(response);
+}

@@ -86,6 +86,16 @@ describe("ClientStore", () => {
     expect(store.getById(second.id)?.archivedAt).toBeUndefined();
   });
 
+  it("marks reminder timestamps for selected clients", () => {
+    const store = createStore();
+    const created = store.create(validInput);
+
+    const result = store.markRemindersSent([created.id], "2026-07-05");
+    expect(result.updated).toHaveLength(1);
+    expect(store.getById(created.id)?.lastReminderAt).toBe("2026-07-05");
+    expect(result.notFound).toEqual([]);
+  });
+
   it("writes valid JSON to disk", () => {
     const store = createStore();
     store.create(validInput);

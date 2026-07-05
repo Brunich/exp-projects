@@ -137,6 +137,64 @@ Columns: `id`, `name`, `company`, `email`, `status`, `next_follow_up`, `notes`, 
 
 Returns a header-only CSV when no archived clients exist.
 
+### `GET /clients/reminders`
+
+Returns follow-up reminder email drafts for overdue active clients.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "drafts": [
+      {
+        "clientId": "uuid",
+        "to": "client@example.com",
+        "clientName": "Marco Ruiz",
+        "company": "Ruiz Logistics",
+        "subject": "Following up — Ruiz Logistics",
+        "body": "Hi Marco,\n\n...",
+        "mailto": "mailto:client%40example.com?subject=...",
+        "daysOverdue": 3,
+        "lastReminderAt": "2026-07-01"
+      }
+    ],
+    "smtpConfigured": false,
+    "overdueCount": 1
+  }
+}
+```
+
+### `POST /clients/reminders`
+
+Sends follow-up reminders for overdue clients when SMTP env vars are set.
+
+**Request body (optional)**
+
+```json
+{
+  "ids": ["uuid-1", "uuid-2"]
+}
+```
+
+Omit `ids` to send to all overdue clients. Successful sends update `lastReminderAt` on each client.
+
+**Response `200`** (SMTP configured)
+
+```json
+{
+  "data": {
+    "results": [
+      { "clientId": "uuid", "to": "client@example.com", "sent": true }
+    ],
+    "sentCount": 1,
+    "failedCount": 0
+  }
+}
+```
+
+**Response `503`** when SMTP is not configured (includes draft payloads in `data.drafts`).
+
 ## Validation rules
 
 - `status` must be one of the enum values used in `src/lib/types.ts`.
@@ -149,7 +207,7 @@ Clients are stored in a JSON file on disk (`CLIENTS_FILE`, default `data/clients
 
 ## Webhook (future)
 
-`POST /webhooks/client-follow-up` could notify external tools (Slack, email) when a follow-up becomes overdue.
+`POST /webhooks/client-follow-up` could notify external tools (Slack) when a follow-up becomes overdue.
 
 ## Error shape
 

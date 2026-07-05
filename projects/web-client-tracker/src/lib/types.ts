@@ -15,6 +15,8 @@ export interface Client {
   notes?: string;
   /** ISO date when the client was archived; omitted for active records */
   archivedAt?: string;
+  /** ISO date when the last follow-up reminder email was sent */
+  lastReminderAt?: string;
 }
 
 export interface SessionUser {

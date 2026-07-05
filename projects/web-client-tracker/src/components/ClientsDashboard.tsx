@@ -12,6 +12,7 @@ import { useClientStorage } from "@/lib/use-client-storage";
 import { ClientForm } from "./ClientForm";
 import { ClientTable } from "./ClientTable";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ReminderPanel } from "./ReminderPanel";
 
 type FormMode = "create" | "edit" | null;
 
@@ -34,6 +35,7 @@ export function ClientsDashboard() {
     restoreClient,
     restoreClientsBulk,
     removeClient,
+    refresh,
   } = useClientStorage();
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -224,15 +226,11 @@ export function ClientsDashboard() {
       ) : null}
 
       {!showArchived && overdue.length > 0 ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-          <p className="text-sm font-medium text-rose-800">
-            {overdue.length} client{overdue.length === 1 ? "" : "s"} need
-            follow-up
-          </p>
-          <p className="mt-0.5 text-sm text-rose-700">
-            {overdue.map((client) => client.name).join(", ")}
-          </p>
-        </section>
+        <ReminderPanel
+          overdueClients={overdue}
+          disabled={mutating}
+          onRemindersSent={() => void refresh()}
+        />
       ) : null}
 
       {showArchived ? (

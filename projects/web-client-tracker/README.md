@@ -9,6 +9,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - REST API (`/api/clients`) with JSON file persistence
 - Client table with status badges and follow-up urgency
 - Overdue follow-up alert banner
+- Email reminder drafts with mailto links and optional SMTP bulk send
 - Status filter (lead, active, negotiating, paused, closed)
 - Add and edit clients with form validation
 - Archive clients with restore and permanent delete
@@ -67,6 +68,11 @@ data/
 | --------------------- | ------------------------------------------------ |
 | `NEXT_PUBLIC_APP_URL` | Public app URL for redirects                     |
 | `CLIENTS_FILE`        | Path to JSON client store (default `data/clients.json`) |
+| `SMTP_HOST`           | SMTP host for server-sent reminders (optional)          |
+| `SMTP_PORT`           | SMTP port (default `587`)                               |
+| `SMTP_USER`           | SMTP username                                           |
+| `SMTP_PASS`           | SMTP password                                           |
+| `SMTP_FROM`           | From address for sent reminders                         |
 
 ## API
 
@@ -78,6 +84,8 @@ All `/api/clients` routes require an active session cookie (log in first).
 - `PATCH /api/clients/bulk` — archive or restore multiple clients (`{ "action": "archive" | "restore", "ids": ["uuid", ...] }`)
 - `DELETE /api/clients/:id` — permanent delete
 - `GET /api/clients/export?scope=archived` — download archived clients as CSV
+- `GET /api/clients/reminders` — list overdue follow-up email drafts
+- `POST /api/clients/reminders` — send reminders via SMTP when configured
 
 See `docs/api-contract.md` for request/response shapes.
 
@@ -89,6 +97,6 @@ See `docs/api-contract.md` for request/response shapes.
 
 ## Next steps
 
-- Add bulk archive actions
 - Replace file store with Supabase or Postgres for multi-instance deploys
-- Email reminders for overdue follow-ups
+- Scheduled cron to auto-send reminders when SMTP is configured
+- Slack/webhook notifications for overdue follow-ups
