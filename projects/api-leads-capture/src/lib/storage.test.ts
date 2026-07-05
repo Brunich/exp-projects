@@ -74,4 +74,15 @@ describe("LeadStore file persistence", () => {
 
     expect(() => new LeadStore({ filePath })).toThrow(/Invalid JSON/);
   });
+
+  it("finds leads by email with case-insensitive matching", () => {
+    const store = new LeadStore();
+    const lead = store.create({
+      name: "Ana Lopez",
+      email: "ana@example.com",
+    });
+
+    expect(store.findByEmail("ANA@EXAMPLE.COM")).toEqual(lead);
+    expect(store.findByEmail("other@example.com")).toBeUndefined();
+  });
 });

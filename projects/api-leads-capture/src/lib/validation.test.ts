@@ -57,4 +57,16 @@ describe("validateLeadInput", () => {
       expect(result.details.email).toBeDefined();
     }
   });
+
+  it("normalizes email to lowercase", () => {
+    const result = validateLeadInput({
+      name: "Jane Doe",
+      email: "  Jane@Example.COM ",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.email).toBe("jane@example.com");
+    }
+  });
 });

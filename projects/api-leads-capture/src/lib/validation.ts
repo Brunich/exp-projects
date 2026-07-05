@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { LeadInput } from "../types.js";
+import { normalizeLeadEmail } from "./lead-dedup.js";
 
 const LEAD_SOURCES = ["landing", "referral", "ads", "other"] as const;
 
@@ -46,7 +47,7 @@ export function validateLeadInput(payload: unknown): ValidationResult {
 
   const data: LeadInput = {
     name: parsed.data.name,
-    email: parsed.data.email,
+    email: normalizeLeadEmail(parsed.data.email),
     company: parsed.data.company || undefined,
     message: parsed.data.message || undefined,
     source: parsed.data.source ?? "landing",

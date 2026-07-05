@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
+import { emailsMatch } from "./lead-dedup.js";
 import { filterLeads, filterLeadsForExport, type LeadListQuery } from "./lead-filters.js";
 import type { Lead, LeadInput } from "../types.js";
 
@@ -48,6 +49,10 @@ export class LeadStore {
 
   listForExport(query: Pick<LeadListQuery, "source" | "q" | "since">): Lead[] {
     return filterLeadsForExport(this.leads, query);
+  }
+
+  findByEmail(email: string): Lead | undefined {
+    return this.leads.find((lead) => emailsMatch(lead.email, email));
   }
 
   create(input: LeadInput): Lead {

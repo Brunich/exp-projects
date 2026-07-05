@@ -179,6 +179,103 @@ describe("lead routes", () => {
     expect(response.json().data.email).toBe("bot@spam.com");
     expect(store.count()).toBe(beforeCount);
   });
+
+  it("returns existing lead when email is a duplicate", async () => {
+    const countBefore = store.count();
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Original Name",
+        email: "dup@example.com",
+        message: "First submission",
+      },
+    });
+
+    expect(first.statusCode).toBe(201);
+    const original = first.json().data;
+    expect(store.count()).toBe(countBefore + 1);
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Different Name",
+        email: "  DUP@example.com ",
+        message: "Second submission",
+      },
+    });
+
+    expect(duplicate.statusCode).toBe(200);
+    const body = duplicate.json();
+    expect(body.meta).toEqual({ duplicate: true });
+    expect(body.data.id).toBe(original.id);
+    expect(body.data.name).toBe("Original Name");
+    expect(body.data.email).toBe("dup@example.com");
+    expect(store.count()).toBe(countBefore + 1);
+  });
+});
+
+describe("POST /leads duplicate webhook behavior", () => {
+  let app: FastifyInstance;
+  const store = new LeadStore();
+  let webhookCalls = 0;
+  const originalFetch = globalThis.fetch;
+
+  beforeAll(async () => {
+    store.clear();
+    webhookCalls = 0;
+
+    globalThis.fetch = (async () => {
+      webhookCalls += 1;
+      return new Response(null, { status: 200 });
+    }) as typeof fetch;
+
+    app = await buildApp(
+      defaultAppConfig({
+        apiKey: "test-api-key",
+        store,
+        webhook: { url: "https://hooks.example.com/leads" },
+        rateLimit: { max: 1000, windowMs: 60_000 },
+      }),
+    );
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    globalThis.fetch = originalFetch;
+    await app.close();
+  });
+
+  it("does not notify webhook for duplicate email submissions", async () => {
+    webhookCalls = 0;
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Webhook User",
+        email: "webhook-dup@example.com",
+      },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(webhookCalls).toBe(1);
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Webhook User Again",
+        email: "webhook-dup@example.com",
+      },
+    });
+
+    expect(duplicate.statusCode).toBe(200);
+    expect(duplicate.json().meta.duplicate).toBe(true);
+    expect(webhookCalls).toBe(1);
+  });
 });
 
 describe("POST /leads rate limiting", () => {

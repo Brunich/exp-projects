@@ -97,6 +97,18 @@ export async function registerLeadRoutes(
         return reply.status(400).send(validationError(validation.details));
       }
 
+      const existing = config.store.findByEmail(validation.data.email);
+      if (existing) {
+        request.log.info(
+          { leadId: existing.id, email: existing.email },
+          "Duplicate lead submission ignored",
+        );
+        return reply.status(200).send({
+          data: existing,
+          meta: { duplicate: true },
+        });
+      }
+
       const lead = config.store.create(validation.data);
 
       if (config.webhook?.url) {

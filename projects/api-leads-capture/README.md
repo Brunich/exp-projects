@@ -7,6 +7,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 ## Features
 
 - `POST /leads` — public endpoint for form submissions with Zod validation
+- Email deduplication on `POST /leads` — duplicate addresses return the existing lead without re-firing webhooks
 - Honeypot field check (`website` by default) silently rejects bots with a decoy 201
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
 - `GET /leads` — list stored leads with optional filters, pagination, and CSV export (API key required)
@@ -77,7 +78,7 @@ The `website` field is the default honeypot. If a bot fills it, the API returns 
 
 `source` accepts `landing`, `referral`, `ads`, or `other` (defaults to `landing`).
 
-**Response `201`**
+**Response `201`** (new lead)
 
 ```json
 {
@@ -90,6 +91,17 @@ The `website` field is the default honeypot. If a bot fills it, the API returns 
   }
 }
 ```
+
+**Response `200`** (duplicate email — same lead returned, no webhook)
+
+```json
+{
+  "data": { "...existing lead fields..." },
+  "meta": { "duplicate": true }
+}
+```
+
+Emails are compared case-insensitively (`Jane@Example.com` matches `jane@example.com`).
 
 ### `GET /leads`
 
@@ -230,4 +242,3 @@ curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAf
 ## Next steps
 
 - Optional Supabase sync for multi-instance deploys
-- Export leads as CSV from the list endpoint
