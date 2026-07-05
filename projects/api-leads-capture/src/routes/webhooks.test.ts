@@ -193,6 +193,100 @@ describe("webhook queue routes", () => {
     expect(response.json().data.replayedCount).toBe(0);
     expect(response.json().data.processResult.processed).toBe(0);
   });
+
+  it("replays only dead letters that match source and date filters", async () => {
+    webhookQueue.clear();
+    const early = new Date("2026-07-04T10:00:00.000Z");
+    const late = new Date("2026-07-04T12:00:00.000Z");
+
+    for (const [id, email, source, when] of [
+      [
+        "77777777-7777-4777-8777-777777777777",
+        "landing@example.com",
+        "landing",
+        early,
+      ],
+      [
+        "88888888-8888-4888-8888-888888888888",
+        "ads@example.com",
+        "ads",
+        late,
+      ],
+    ] as const) {
+      const item = webhookQueue.enqueue(
+        {
+          id,
+          name: "Dead Letter",
+          email,
+          source,
+          createdAt: when.toISOString(),
+        },
+        { url: "https://hooks.example.com/leads" },
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+
+      webhookQueue.recordFailure(
+        item.id,
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+      webhookQueue.recordFailure(
+        item.id,
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+    }
+
+    expect(webhookQueue.stats().dead).toBe(2);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(null, { status: 200 });
+
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/webhooks/queue/replay-dead?source=ads&deadAfter=2026-07-04T11:00:00.000Z",
+        headers: { "x-api-key": apiKey },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.replayedCount).toBe(1);
+      expect(response.json().data.processResult.delivered).toBe(1);
+      expect(webhookQueue.stats()).toEqual({ pending: 0, dead: 1, total: 1 });
+      expect(webhookQueue.listDeadLetters()[0]?.lead.source).toBe("landing");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("filters queue items on GET /webhooks/queue", async () => {
+    webhookQueue.clear();
+    const now = new Date("2026-07-04T10:00:00.000Z");
+
+    webhookQueue.enqueue(
+      {
+        id: "99999999-9999-4999-8999-999999999999",
+        name: "Pending",
+        email: "pending@example.com",
+        source: "landing",
+        createdAt: now.toISOString(),
+      },
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, error: "failed" },
+      now,
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/webhooks/queue?status=pending",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.items).toHaveLength(1);
+    expect(response.json().data.items[0].status).toBe("pending");
+  });
 });
 
 describe("POST /leads webhook retry queue", () => {

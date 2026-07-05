@@ -114,6 +114,15 @@ When delivery fails, the lead is still stored and the webhook is queued for retr
 
 Requires API key. Returns queue stats and pending/dead items when `WEBHOOK_URL` is configured.
 
+Optional query filters:
+
+| Param | Description |
+| ----- | ----------- |
+| `status` | `pending` or `dead` |
+| `source` | Lead source: `landing`, `referral`, `ads`, `other` |
+| `deadAfter` | ISO datetime — include items with `updatedAt` on or after this time |
+| `deadBefore` | ISO datetime — include items with `updatedAt` on or before this time |
+
 ### `POST /webhooks/queue/:id/replay`
 
 Requires API key. Requeues a dead-letter item for immediate retry and runs the worker once.
@@ -138,7 +147,7 @@ Returns `400` if the item is still pending, or `404` if the id is unknown.
 
 ### `POST /webhooks/queue/replay-dead`
 
-Requires API key. Requeues every dead-letter item for immediate retry and runs the worker once.
+Requires API key. Requeues dead-letter items for immediate retry and runs the worker once. Accepts the same query filters as `GET /webhooks/queue` to replay a subset (for example, only `ads` leads that failed after a given date).
 
 **Response `200`**
 
@@ -176,9 +185,12 @@ curl -X POST http://localhost:3001/leads \
 
 curl http://localhost:3001/leads \
   -H "x-api-key: dev-api-key-change-me"
+
+curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAfter=2026-07-01T00:00:00.000Z" \
+  -H "x-api-key: dev-api-key-change-me"
 ```
 
 ## Next steps
 
 - Optional Supabase sync for multi-instance deploys
-- Filtered replay by date or lead source for dead-letter items
+- Admin dashboard for webhook queue inspection

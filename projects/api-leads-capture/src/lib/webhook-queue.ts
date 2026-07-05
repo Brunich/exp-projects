@@ -9,6 +9,8 @@ import {
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { Lead } from "../types.js";
+import type { DeadLetterFilter } from "./dead-letter-filter.js";
+import { matchesQueueFilter } from "./dead-letter-filter.js";
 import {
   notifyLeadWebhook,
   type WebhookConfig,
@@ -107,8 +109,10 @@ export class WebhookQueueStore {
     };
   }
 
-  listDeadLetters(): WebhookQueueItem[] {
-    return this.items.filter((item) => item.status === "dead");
+  listDeadLetters(filter?: DeadLetterFilter): WebhookQueueItem[] {
+    return this.items.filter(
+      (item) => item.status === "dead" && matchesQueueFilter(item, filter),
+    );
   }
 
   enqueue(
@@ -195,7 +199,14 @@ export class WebhookQueueStore {
   }
 
   replayAllDeadLetters(now = new Date()): WebhookQueueItem[] {
-    const deadIds = this.listDeadLetters().map((item) => item.id);
+    return this.replayDeadLetters(undefined, now);
+  }
+
+  replayDeadLetters(
+    filter?: DeadLetterFilter,
+    now = new Date(),
+  ): WebhookQueueItem[] {
+    const deadIds = this.listDeadLetters(filter).map((item) => item.id);
     return deadIds.map((id) => this.replayDeadLetter(id, now));
   }
 

@@ -169,6 +169,54 @@ describe("WebhookQueueStore", () => {
     expect(store.stats()).toEqual({ pending: 2, dead: 0, total: 2 });
   });
 
+  it("replays only dead letters that match source and date filters", () => {
+    const store = new WebhookQueueStore({ maxAttempts: 2 });
+    const early = new Date("2026-07-04T10:00:00.000Z");
+    const late = new Date("2026-07-04T12:00:00.000Z");
+
+    const landingLead: Lead = {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: "Landing Lead",
+      email: "landing@example.com",
+      source: "landing",
+      createdAt: early.toISOString(),
+    };
+    const adsLead: Lead = {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      name: "Ads Lead",
+      email: "ads@example.com",
+      source: "ads",
+      createdAt: late.toISOString(),
+    };
+
+    for (const [lead, when] of [
+      [landingLead, early],
+      [adsLead, late],
+    ] as const) {
+      const item = store.enqueue(
+        lead,
+        { url: "https://hooks.example.com/leads" },
+        { delivered: false, error: "timeout" },
+        when,
+      );
+
+      store.recordFailure(
+        item.id,
+        { delivered: false, error: "timeout again" },
+        when,
+      );
+    }
+
+    const replayed = store.replayDeadLetters({
+      source: "ads",
+      deadAfter: "2026-07-04T11:00:00.000Z",
+    });
+
+    expect(replayed).toHaveLength(1);
+    expect(replayed[0]?.lead.source).toBe("ads");
+    expect(store.stats()).toEqual({ pending: 1, dead: 1, total: 2 });
+  });
+
   it("returns only pending items that are due", () => {
     const store = new WebhookQueueStore({ maxAttempts: 5 });
     const now = new Date("2026-07-04T10:00:00.000Z");
