@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import {
   buildCustomTemplate,
   deleteCustomTemplate,
+  duplicateCustomTemplateById,
   getCustomTemplatesSnapshot,
   loadCustomTemplates,
   subscribeCustomTemplates,
@@ -41,9 +42,13 @@ export function useCustomTemplates() {
     deleteCustomTemplate(window.localStorage, id);
   }
 
+  function duplicateTemplate(id: string): ServiceTemplate | undefined {
+    return duplicateCustomTemplateById(window.localStorage, id);
+  }
+
   function getTemplate(id: string): ServiceTemplate | undefined {
     return loadCustomTemplates(window.localStorage).find((entry) => entry.id === id);
   }
 
-  return { templates, saveTemplate, removeTemplate, getTemplate };
+  return { templates, saveTemplate, removeTemplate, duplicateTemplate, getTemplate };
 }

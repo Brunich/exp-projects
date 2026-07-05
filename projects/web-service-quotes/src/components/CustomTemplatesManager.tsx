@@ -6,9 +6,10 @@ import { useCustomTemplates } from "@/lib/use-custom-templates";
 import { TemplateEditor } from "./TemplateEditor";
 
 export function CustomTemplatesManager() {
-  const { templates } = useCustomTemplates();
+  const { templates, duplicateTemplate } = useCustomTemplates();
   const [editingId, setEditingId] = useState<string | undefined>();
   const [showEditor, setShowEditor] = useState(false);
+  const [duplicatedId, setDuplicatedId] = useState<string | undefined>();
 
   function startCreate() {
     setEditingId(undefined);
@@ -23,6 +24,15 @@ export function CustomTemplatesManager() {
   function handleSaved() {
     setShowEditor(false);
     setEditingId(undefined);
+    setDuplicatedId(undefined);
+  }
+
+  function handleDuplicate(id: string) {
+    const copy = duplicateTemplate(id);
+    if (!copy) return;
+    setDuplicatedId(copy.id);
+    setEditingId(copy.id);
+    setShowEditor(true);
   }
 
   return (
@@ -43,6 +53,12 @@ export function CustomTemplatesManager() {
         </button>
       </div>
 
+      {duplicatedId && showEditor ? (
+        <p className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+          Template duplicated — adjust the name or line items, then save.
+        </p>
+      ) : null}
+
       {showEditor ? (
         <TemplateEditor
           editingId={editingId}
@@ -50,6 +66,7 @@ export function CustomTemplatesManager() {
           onCancel={() => {
             setShowEditor(false);
             setEditingId(undefined);
+            setDuplicatedId(undefined);
           }}
         />
       ) : null}
@@ -80,13 +97,22 @@ export function CustomTemplatesManager() {
                     {template.lineItems.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => startEdit(template.id)}
-                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                >
-                  Edit
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(template.id)}
+                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicate(template.id)}
+                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Duplicate
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildCustomTemplate,
   deleteCustomTemplate,
+  duplicateCustomTemplate,
+  duplicateCustomTemplateById,
   parseCustomTemplates,
   upsertCustomTemplate,
   validateCustomTemplateInput,
@@ -114,5 +116,61 @@ describe("buildCustomTemplate", () => {
 
     expect(template.id.startsWith("custom-")).toBe(true);
     expect(template.name).toBe("Pressure wash");
+  });
+});
+
+describe("duplicateCustomTemplate", () => {
+  it("creates a new id and prefixes the name", () => {
+    const duplicate = duplicateCustomTemplate(sampleTemplate);
+
+    expect(duplicate.id).not.toBe(sampleTemplate.id);
+    expect(duplicate.id.startsWith("custom-")).toBe(true);
+    expect(duplicate.name).toBe("Copy of Gutter cleaning");
+    expect(duplicate.category).toBe(sampleTemplate.category);
+    expect(duplicate.description).toBe(sampleTemplate.description);
+    expect(duplicate.lineItems).toEqual(sampleTemplate.lineItems);
+    expect(duplicate.lineItems).not.toBe(sampleTemplate.lineItems);
+  });
+
+  it("appends (copy) when duplicating an already copied template", () => {
+    const duplicate = duplicateCustomTemplate({
+      ...sampleTemplate,
+      name: "Copy of Gutter cleaning",
+    });
+
+    expect(duplicate.name).toBe("Copy of Gutter cleaning (copy)");
+  });
+});
+
+describe("duplicateCustomTemplateById", () => {
+  it("persists a duplicate alongside the source template", () => {
+    const storage = new Map<string, string>();
+    const adapter = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+    } as Storage;
+
+    upsertCustomTemplate(adapter, sampleTemplate);
+    const duplicate = duplicateCustomTemplateById(adapter, sampleTemplate.id);
+
+    expect(duplicate).toBeDefined();
+    expect(duplicate!.id).not.toBe(sampleTemplate.id);
+    expect(parseCustomTemplates(storage.get("service-quotes:custom-templates")!)).toHaveLength(
+      2,
+    );
+  });
+
+  it("returns undefined when the source template is missing", () => {
+    const storage = new Map<string, string>();
+    const adapter = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+    } as Storage;
+
+    expect(duplicateCustomTemplateById(adapter, "custom-missing")).toBeUndefined();
   });
 });

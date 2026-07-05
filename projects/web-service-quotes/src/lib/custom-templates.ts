@@ -125,6 +125,25 @@ export function buildCustomTemplate(input: CustomTemplateInput): ServiceTemplate
   };
 }
 
+export function duplicateTemplateName(name: string): string {
+  const trimmed = name.trim();
+  const copyPrefix = "Copy of ";
+  if (trimmed.startsWith(copyPrefix)) {
+    return `${copyPrefix}${trimmed.slice(copyPrefix.length)} (copy)`;
+  }
+  return `${copyPrefix}${trimmed}`;
+}
+
+export function duplicateCustomTemplate(source: ServiceTemplate): ServiceTemplate {
+  return {
+    id: createCustomTemplateId(),
+    name: duplicateTemplateName(source.name),
+    category: source.category,
+    description: source.description,
+    lineItems: source.lineItems.map((item) => ({ ...item })),
+  };
+}
+
 export function loadCustomTemplates(storage: Storage | null): ServiceTemplate[] {
   if (!storage) return [];
   return parseCustomTemplates(storage.getItem(CUSTOM_TEMPLATES_KEY));
@@ -161,6 +180,18 @@ export function deleteCustomTemplate(
   const next = loadCustomTemplates(storage).filter((template) => template.id !== id);
   saveCustomTemplates(storage, next);
   return next;
+}
+
+export function duplicateCustomTemplateById(
+  storage: Storage | null,
+  id: string,
+): ServiceTemplate | undefined {
+  const source = getCustomTemplateById(storage, id);
+  if (!source) return undefined;
+
+  const duplicate = duplicateCustomTemplate(source);
+  upsertCustomTemplate(storage, duplicate);
+  return duplicate;
 }
 
 export function getCustomTemplateById(
