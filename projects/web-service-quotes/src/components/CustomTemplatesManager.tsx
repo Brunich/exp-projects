@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  filterCustomTemplates,
+  getCustomTemplateCategories,
+} from "@/lib/custom-templates";
 import { useCustomTemplates } from "@/lib/use-custom-templates";
 import { TemplateEditor } from "./TemplateEditor";
 
@@ -10,6 +14,24 @@ export function CustomTemplatesManager() {
   const [editingId, setEditingId] = useState<string | undefined>();
   const [showEditor, setShowEditor] = useState(false);
   const [duplicatedId, setDuplicatedId] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+
+  const categories = useMemo(
+    () => getCustomTemplateCategories(templates),
+    [templates],
+  );
+
+  const filteredTemplates = useMemo(
+    () =>
+      filterCustomTemplates(templates, {
+        query: searchQuery,
+        category: categoryFilter || undefined,
+      }),
+    [templates, searchQuery, categoryFilter],
+  );
+
+  const hasActiveFilters = searchQuery.trim().length > 0 || categoryFilter.length > 0;
 
   function startCreate() {
     setEditingId(undefined);
@@ -72,16 +94,70 @@ export function CustomTemplatesManager() {
       ) : null}
 
       <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Your templates
-        </h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Your templates
+          </h2>
+          {templates.length > 0 ? (
+            <p className="text-xs text-zinc-500">
+              Showing {filteredTemplates.length} of {templates.length}
+            </p>
+          ) : null}
+        </div>
+
+        {templates.length > 0 ? (
+          <div className="mt-4 flex flex-wrap gap-3">
+            <label className="min-w-[12rem] flex-1 text-sm">
+              <span className="mb-1 block font-medium text-zinc-700">Search</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Name, category, or line item…"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              />
+            </label>
+            <label className="w-full text-sm sm:w-48">
+              <span className="mb-1 block font-medium text-zinc-700">Category</span>
+              <select
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              >
+                <option value="">All categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter("");
+                }}
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         {templates.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-600">
             No custom templates yet. Create one to speed up repeat jobs.
           </p>
+        ) : filteredTemplates.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-600">
+            No templates match your search. Try a different keyword or category.
+          </p>
         ) : (
           <ul className="mt-4 divide-y divide-zinc-100">
-            {templates.map((template) => (
+            {filteredTemplates.map((template) => (
               <li
                 key={template.id}
                 className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"

@@ -4,6 +4,8 @@ import {
   deleteCustomTemplate,
   duplicateCustomTemplate,
   duplicateCustomTemplateById,
+  filterCustomTemplates,
+  getCustomTemplateCategories,
   parseCustomTemplates,
   upsertCustomTemplate,
   validateCustomTemplateInput,
@@ -172,5 +174,68 @@ describe("duplicateCustomTemplateById", () => {
     } as Storage;
 
     expect(duplicateCustomTemplateById(adapter, "custom-missing")).toBeUndefined();
+  });
+});
+
+describe("filterCustomTemplates", () => {
+  const plumbingTemplate: ServiceTemplate = {
+    ...sampleTemplate,
+    id: "custom-plumbing",
+    name: "Drain unclog",
+    category: "Plumbing",
+    description: "Kitchen sink backup",
+    lineItems: [{ description: "Snake drain", quantity: 1, unitPrice: 95 }],
+  };
+
+  const templates = [sampleTemplate, plumbingTemplate];
+
+  it("returns all templates when no filter is set", () => {
+    expect(filterCustomTemplates(templates)).toEqual(templates);
+  });
+
+  it("filters by category", () => {
+    expect(
+      filterCustomTemplates(templates, { category: "Plumbing" }),
+    ).toEqual([plumbingTemplate]);
+  });
+
+  it("matches query across name, category, description, and line items", () => {
+    expect(filterCustomTemplates(templates, { query: "gutter" })).toEqual([
+      sampleTemplate,
+    ]);
+    expect(filterCustomTemplates(templates, { query: "snake" })).toEqual([
+      plumbingTemplate,
+    ]);
+    expect(filterCustomTemplates(templates, { query: "exterior" })).toEqual([
+      sampleTemplate,
+    ]);
+  });
+
+  it("combines category and query filters", () => {
+    expect(
+      filterCustomTemplates(templates, {
+        category: "Exterior",
+        query: "downspout",
+      }),
+    ).toEqual([sampleTemplate]);
+
+    expect(
+      filterCustomTemplates(templates, {
+        category: "Plumbing",
+        query: "gutter",
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("getCustomTemplateCategories", () => {
+  it("returns sorted unique categories", () => {
+    expect(
+      getCustomTemplateCategories([
+        sampleTemplate,
+        { ...sampleTemplate, id: "custom-2", category: "Plumbing" },
+        { ...sampleTemplate, id: "custom-3", category: "Cleaning" },
+      ]),
+    ).toEqual(["Cleaning", "Exterior", "Plumbing"]);
   });
 });

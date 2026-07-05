@@ -7,6 +7,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Landing page with product overview
 - Service templates (cleaning, lawn care, plumbing, painting)
 - Custom template editor with local storage (create, edit, delete, duplicate your own job packages)
+- Search and category filter on the custom templates page
 - Quote builder with editable line items, tax rate, and validity date
 - Live subtotal, tax, and total calculations
 - One-click PDF download for completed quotes (client, title, and line items required)

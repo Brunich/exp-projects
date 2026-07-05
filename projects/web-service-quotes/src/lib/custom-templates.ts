@@ -229,3 +229,45 @@ export function getCustomTemplatesSnapshot(): ServiceTemplate[] {
 export function isCustomTemplateId(id: string): boolean {
   return id.startsWith("custom-");
 }
+
+export interface CustomTemplateFilter {
+  query?: string;
+  category?: string;
+}
+
+export function getCustomTemplateCategories(templates: ServiceTemplate[]): string[] {
+  const categories = new Set(
+    templates.map((template) => template.category.trim()).filter(Boolean),
+  );
+
+  return [...categories].sort((a, b) => a.localeCompare(b));
+}
+
+export function filterCustomTemplates(
+  templates: ServiceTemplate[],
+  filter: CustomTemplateFilter = {},
+): ServiceTemplate[] {
+  const query = filter.query?.trim().toLowerCase() ?? "";
+  const category = filter.category?.trim() ?? "";
+
+  return templates.filter((template) => {
+    if (category && template.category !== category) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    const haystack = [
+      template.name,
+      template.category,
+      template.description,
+      ...template.lineItems.map((item) => item.description),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(query);
+  });
+}
