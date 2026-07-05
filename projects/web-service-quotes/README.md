@@ -6,6 +6,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 
 - Landing page with product overview
 - Service templates (cleaning, lawn care, plumbing, painting)
+- Custom template editor with local storage (create, edit, delete your own job packages)
 - Quote builder with editable line items, tax rate, and validity date
 - Live subtotal, tax, and total calculations
 - One-click PDF download for completed quotes (client, title, and line items required)
@@ -59,6 +60,7 @@ src/
 | `service-quotes:draft` | In-progress draft (auto-saved) |
 | `service-quotes:saved` | Saved quote library |
 | `service-quotes:brand` | Logo and business name for PDF exports |
+| `service-quotes:custom-templates` | User-created service templates |
 
 Saved quotes stay on the current browser/device. Use **Save quote** in the builder to add or update the library. The home page lists saved quotes; click one to resume editing, use **PDF** to download a copy, or **Delete** to remove a quote from this device.
 
@@ -73,7 +75,10 @@ Saved quotes stay on the current browser/device. Use **Save quote** in the build
 | `NEXT_PUBLIC_APP_URL`      | Public app URL                       |
 | `NEXT_PUBLIC_BUSINESS_NAME`| Business name shown on quote preview |
 
+## Custom templates
+
+Open **Templates** from the home page or quote builder to create job packages with your own line items. Custom templates appear alongside built-in ones when starting a quote.
+
 ## Next steps
 
-- Custom template editor for each business
 - Cloud sync API for multi-device access

@@ -7,12 +7,20 @@ export default function Home() {
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <p className="font-semibold text-zinc-900">Service Quote Builder</p>
-          <Link
-            href="/quotes/new?fresh=1"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-          >
-            New quote
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/templates"
+              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Templates
+            </Link>
+            <Link
+              href="/quotes/new?fresh=1"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              New quote
+            </Link>
+          </div>
         </div>
       </header>
 

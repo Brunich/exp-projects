@@ -1,5 +1,5 @@
 # Next Tasks
 
-1. Add custom service template editor in `web-service-quotes` (web day).
-2. Add email reminders for overdue follow-ups in `web-client-tracker`.
-3. Add admin dashboard for webhook queue inspection in `api-leads-capture`.
+1. Add email reminders for overdue follow-ups in `web-client-tracker` (web day).
+2. Add admin dashboard for webhook queue inspection in `api-leads-capture` (backend day).
+3. Add duplicate-template action in `web-service-quotes`.

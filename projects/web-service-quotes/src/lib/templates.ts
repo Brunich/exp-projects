@@ -50,3 +50,14 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
 export function getTemplateById(id: string): ServiceTemplate | undefined {
   return SERVICE_TEMPLATES.find((template) => template.id === id);
 }
+
+export function listBuiltInTemplates(): ServiceTemplate[] {
+  return SERVICE_TEMPLATES;
+}
+
+export function mergeTemplates(
+  builtIn: ServiceTemplate[],
+  custom: ServiceTemplate[],
+): ServiceTemplate[] {
+  return [...builtIn, ...custom];
+}
