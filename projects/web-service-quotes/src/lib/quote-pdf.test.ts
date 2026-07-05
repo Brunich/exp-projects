@@ -8,6 +8,8 @@ import {
 import type { QuoteDraft } from "./types";
 
 const exportableQuote: QuoteDraft = {
+  quoteNumber: "Q-2026-0042",
+  issueDate: "2026-07-04",
   clientName: "Jane Smith",
   projectTitle: "Spring Lawn Care",
   validUntil: "2026-07-18",
@@ -45,22 +47,35 @@ describe("getQuoteExportReadiness", () => {
 
 describe("buildQuotePdfFilename", () => {
   it("slugifies the project title", () => {
-    expect(buildQuotePdfFilename(exportableQuote)).toBe("spring-lawn-care.pdf");
+    expect(buildQuotePdfFilename(exportableQuote)).toBe("q-2026-0042.pdf");
   });
 
-  it("falls back to client name when project title is empty", () => {
+  it("prefers quote number in the filename", () => {
     expect(
       buildQuotePdfFilename({
         ...exportableQuote,
+        quoteNumber: "Q-2026-0099",
+      }),
+    ).toBe("q-2026-0099.pdf");
+  });
+
+  it("falls back to client name when project title and quote number are empty", () => {
+    expect(
+      buildQuotePdfFilename({
+        ...exportableQuote,
+        quoteNumber: "",
         projectTitle: "",
       }),
     ).toBe("quote-jane-smith.pdf");
   });
 
   it("appends a short quote id when provided", () => {
-    expect(buildQuotePdfFilename(exportableQuote, "quote-abc12345")).toBe(
-      "spring-lawn-care-quote-ab.pdf",
-    );
+    expect(
+      buildQuotePdfFilename(
+        { ...exportableQuote, quoteNumber: "" },
+        "quote-abc12345",
+      ),
+    ).toBe("spring-lawn-care-quote-ab.pdf");
   });
 });
 

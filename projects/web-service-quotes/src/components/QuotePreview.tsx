@@ -13,7 +13,7 @@ export function QuotePreview({
   logoDataUrl,
 }: QuotePreviewProps) {
   const totals = calculateQuoteTotals(quote.lineItems, quote.taxRatePercent);
-  const issuedOn = new Date().toISOString().slice(0, 10);
+  const issuedOn = quote.issueDate || new Date().toISOString().slice(0, 10);
 
   return (
     <section
@@ -24,6 +24,11 @@ export function QuotePreview({
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
             Service quote
+            {quote.quoteNumber.trim() ? (
+              <span className="ml-2 font-mono normal-case text-zinc-700">
+                {quote.quoteNumber.trim()}
+              </span>
+            ) : null}
           </p>
           <h2 className="mt-1 text-2xl font-bold text-zinc-900">
             {quote.projectTitle || "Untitled project"}

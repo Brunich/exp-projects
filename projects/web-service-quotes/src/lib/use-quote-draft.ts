@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuoteDraft, QuoteDraftState, SavedQuote } from "./types";
-import { createEmptyQuote } from "./quote";
+import { createEmptyQuote, generateNextQuoteNumber } from "./quote";
 import {
   draftToSavedQuote,
   getSavedQuoteById,
@@ -124,6 +124,7 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
     const saved = draftToSavedQuote(draftState.draft, id, {
       createdAt: existing?.createdAt,
       templateId: draftState.selectedTemplateId,
+      existingQuotes: quotes,
     });
 
     const nextQuotes = upsertSavedQuote(quotes, saved);
@@ -131,6 +132,7 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
 
     const nextState: QuoteDraftState = {
       ...draftState,
+      draft: savedQuoteToDraft(saved),
       savedQuoteId: id,
     };
     saveDraftToStorage(storage, nextState);
@@ -151,7 +153,12 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
 
   const startNewQuote = useCallback(() => {
     const storage = window.localStorage;
-    const empty: QuoteDraftState = { draft: createEmptyQuote() };
+    const quotes = loadSavedQuotesFromStorage(storage);
+    const empty: QuoteDraftState = {
+      draft: createEmptyQuote({
+        quoteNumber: generateNextQuoteNumber(quotes),
+      }),
+    };
     saveDraftToStorage(storage, empty);
     setStore((current) => ({
       draftState: empty,

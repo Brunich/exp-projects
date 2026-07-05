@@ -20,6 +20,8 @@ export interface QuoteLineItem {
 }
 
 export interface QuoteDraft {
+  quoteNumber: string;
+  issueDate: string;
   clientName: string;
   projectTitle: string;
   validUntil: string;
@@ -35,6 +37,8 @@ export interface QuoteTotals {
 
 export interface SavedQuote {
   id: string;
+  quoteNumber: string;
+  issueDate: string;
   createdAt: string;
   updatedAt: string;
   clientName: string;

@@ -7,6 +7,7 @@ import type { QuoteDraft, QuoteLineItem } from "./types";
 export interface QuotePdfOptions {
   businessName?: string;
   issuedOn?: string;
+  quoteNumber?: string;
   logoDataUrl?: string;
 }
 
@@ -39,10 +40,11 @@ export function getQuoteExportReadiness(quote: QuoteDraft): QuoteExportReadiness
 }
 
 export function buildQuotePdfFilename(
-  quote: Pick<QuoteDraft, "clientName" | "projectTitle">,
+  quote: Pick<QuoteDraft, "clientName" | "projectTitle" | "quoteNumber">,
   quoteId?: string,
 ): string {
   const base =
+    quote.quoteNumber.trim() ||
     quote.projectTitle.trim() ||
     (quote.clientName.trim() ? `quote-${quote.clientName.trim()}` : "service-quote");
 
@@ -84,7 +86,8 @@ export function generateQuotePdf(
   options: QuotePdfOptions = {},
 ): Blob {
   const businessName = options.businessName?.trim() || "Your Service Co.";
-  const issuedOn = options.issuedOn ?? new Date().toISOString().slice(0, 10);
+  const issuedOn = options.issuedOn ?? quote.issueDate ?? new Date().toISOString().slice(0, 10);
+  const quoteNumber = options.quoteNumber ?? quote.quoteNumber.trim();
   const totals = calculateQuoteTotals(quote.lineItems, quote.taxRatePercent);
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const margin = 48;
@@ -93,7 +96,11 @@ export function generateQuotePdf(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text("SERVICE QUOTE", margin, y);
+  doc.text(
+    quoteNumber ? `SERVICE QUOTE · ${quoteNumber}` : "SERVICE QUOTE",
+    margin,
+    y,
+  );
 
   doc.setFontSize(20);
   doc.setTextColor(24);

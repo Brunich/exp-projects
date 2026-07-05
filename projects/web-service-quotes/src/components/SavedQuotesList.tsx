@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { calculateQuoteTotals, formatCurrency } from "@/lib/quote";
+import { calculateQuoteTotals, formatCurrency, formatQuoteNumberLabel } from "@/lib/quote";
 import {
   getSavedQuotesSnapshot,
   removeSavedQuoteFromStorage,
@@ -82,8 +82,9 @@ export function SavedQuotesList() {
                     {formatQuoteLabel(quote)}
                   </p>
                   <p className="mt-1 text-sm text-zinc-500">
-                    {quote.clientName.trim() || "No client"} · Updated{" "}
-                    {formatUpdatedAt(quote.updatedAt)}
+                    {formatQuoteNumberLabel(quote.quoteNumber)} · Issued{" "}
+                    {formatUpdatedAt(quote.issueDate)} ·{" "}
+                    {quote.clientName.trim() || "No client"}
                   </p>
                 </Link>
                 <div className="flex items-center gap-2">

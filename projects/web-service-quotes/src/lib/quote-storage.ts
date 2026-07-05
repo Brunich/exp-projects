@@ -1,4 +1,4 @@
-import { createEmptyQuote } from "./quote";
+import { createEmptyQuote, generateNextQuoteNumber } from "./quote";
 import type { QuoteDraft, QuoteDraftState, QuoteLineItem, SavedQuote } from "./types";
 
 export const QUOTES_DRAFT_KEY = "service-quotes:draft";
@@ -15,7 +15,20 @@ export function parseDraftState(
     if (!parsed || typeof parsed !== "object") return fallback;
 
     const record = parsed as Record<string, unknown>;
-    if (!isQuoteDraft(record.draft)) return fallback;
+    if (!isQuoteDraft(record.draft)) {
+      const legacy = normalizeLegacyDraft(record.draft as Record<string, unknown>);
+      if (!legacy) return fallback;
+
+      return {
+        draft: legacy,
+        selectedTemplateId:
+          typeof record.selectedTemplateId === "string"
+            ? record.selectedTemplateId
+            : undefined,
+        savedQuoteId:
+          typeof record.savedQuoteId === "string" ? record.savedQuoteId : undefined,
+      };
+    }
 
     return {
       draft: record.draft,
@@ -44,7 +57,14 @@ export function parseSavedQuotes(
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return fallback;
-    return parsed.filter(isSavedQuote);
+
+    const quotes: SavedQuote[] = [];
+    for (const item of parsed) {
+      const normalized = normalizeSavedQuote(item, quotes);
+      if (normalized) quotes.push(normalized);
+    }
+
+    return quotes.length > 0 ? quotes : fallback;
   } catch {
     return fallback;
   }
@@ -61,11 +81,18 @@ export function draftToSavedQuote(
     createdAt?: string;
     updatedAt?: string;
     templateId?: string;
+    existingQuotes?: SavedQuote[];
   } = {},
 ): SavedQuote {
   const now = new Date().toISOString();
+  const quoteNumber =
+    draft.quoteNumber.trim() ||
+    generateNextQuoteNumber(options.existingQuotes ?? []);
+
   return {
     id,
+    quoteNumber,
+    issueDate: draft.issueDate,
     createdAt: options.createdAt ?? now,
     updatedAt: options.updatedAt ?? now,
     clientName: draft.clientName.trim(),
@@ -79,6 +106,8 @@ export function draftToSavedQuote(
 
 export function savedQuoteToDraft(quote: SavedQuote): QuoteDraft {
   return {
+    quoteNumber: quote.quoteNumber,
+    issueDate: quote.issueDate,
     clientName: quote.clientName,
     projectTitle: quote.projectTitle,
     validUntil: quote.validUntil,
@@ -206,6 +235,8 @@ function isQuoteDraft(value: unknown): value is QuoteDraft {
 
   const record = value as Record<string, unknown>;
   return (
+    typeof record.quoteNumber === "string" &&
+    typeof record.issueDate === "string" &&
     typeof record.clientName === "string" &&
     typeof record.projectTitle === "string" &&
     typeof record.validUntil === "string" &&
@@ -215,19 +246,75 @@ function isQuoteDraft(value: unknown): value is QuoteDraft {
   );
 }
 
+function normalizeLegacyDraft(record: Record<string, unknown>): QuoteDraft | null {
+  if (
+    typeof record.clientName !== "string" ||
+    typeof record.projectTitle !== "string" ||
+    typeof record.validUntil !== "string" ||
+    typeof record.taxRatePercent !== "number" ||
+    !Array.isArray(record.lineItems) ||
+    !record.lineItems.every(isQuoteLineItem)
+  ) {
+    return null;
+  }
+
+  return {
+    quoteNumber:
+      typeof record.quoteNumber === "string" ? record.quoteNumber : "",
+    issueDate:
+      typeof record.issueDate === "string"
+        ? record.issueDate
+        : new Date().toISOString().slice(0, 10),
+    clientName: record.clientName,
+    projectTitle: record.projectTitle,
+    validUntil: record.validUntil,
+    taxRatePercent: record.taxRatePercent,
+    lineItems: record.lineItems,
+  };
+}
+
 function isSavedQuote(value: unknown): value is SavedQuote {
   if (!value || typeof value !== "object") return false;
 
   const record = value as Record<string, unknown>;
-  return (
-    typeof record.id === "string" &&
-    typeof record.createdAt === "string" &&
-    typeof record.updatedAt === "string" &&
-    typeof record.clientName === "string" &&
-    typeof record.projectTitle === "string" &&
-    typeof record.validUntil === "string" &&
-    typeof record.taxRatePercent === "number" &&
-    Array.isArray(record.lineItems) &&
-    record.lineItems.every(isQuoteLineItem)
-  );
+  if (
+    typeof record.id !== "string" ||
+    typeof record.createdAt !== "string" ||
+    typeof record.updatedAt !== "string" ||
+    typeof record.clientName !== "string" ||
+    typeof record.projectTitle !== "string" ||
+    typeof record.validUntil !== "string" ||
+    typeof record.taxRatePercent !== "number" ||
+    !Array.isArray(record.lineItems) ||
+    !record.lineItems.every(isQuoteLineItem)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeSavedQuote(
+  value: unknown,
+  existingQuotes: SavedQuote[],
+): SavedQuote | null {
+  if (!isSavedQuote(value)) return null;
+
+  const record = value as SavedQuote;
+  const fallbackIssueDate = record.createdAt.slice(0, 10);
+
+  return {
+    ...record,
+    quoteNumber:
+      typeof record.quoteNumber === "string" && record.quoteNumber.trim()
+        ? record.quoteNumber
+        : generateNextQuoteNumber(
+            existingQuotes,
+            new Date(fallbackIssueDate || Date.now()),
+          ),
+    issueDate:
+      typeof record.issueDate === "string" && record.issueDate
+        ? record.issueDate
+        : fallbackIssueDate,
+  };
 }

@@ -114,7 +114,7 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
         <div className="text-sm text-zinc-600">
           {currentSavedId ? (
             <span>
-              Editing saved quote{" "}
+              Editing {quote.quoteNumber || "saved quote"}{" "}
               <span className="font-mono text-xs text-zinc-500">
                 {currentSavedId.slice(0, 8)}
               </span>
@@ -163,6 +163,35 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-zinc-900">Quote details</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm">
+            <span className="font-medium text-zinc-700">Quote number</span>
+            <input
+              type="text"
+              value={quote.quoteNumber}
+              onChange={(event) =>
+                setQuote((current) => ({
+                  ...current,
+                  quoteNumber: event.target.value,
+                }))
+              }
+              placeholder="Q-2026-0001"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono text-sm"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="font-medium text-zinc-700">Issue date</span>
+            <input
+              type="date"
+              value={quote.issueDate}
+              onChange={(event) =>
+                setQuote((current) => ({
+                  ...current,
+                  issueDate: event.target.value,
+                }))
+              }
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
+            />
+          </label>
           <label className="block text-sm">
             <span className="font-medium text-zinc-700">Client name</span>
             <input

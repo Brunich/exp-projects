@@ -38,6 +38,8 @@ export function DownloadQuotePdfButton({
     setError(null);
     downloadQuotePdf(quote, {
       businessName: resolvedBusinessName,
+      issuedOn: quote.issueDate,
+      quoteNumber: quote.quoteNumber,
       logoDataUrl: settings.logoDataUrl,
       quoteId,
     });

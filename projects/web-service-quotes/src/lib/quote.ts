@@ -1,4 +1,4 @@
-import type { QuoteDraft, QuoteLineItem, QuoteTotals } from "./types";
+import type { QuoteDraft, QuoteLineItem, QuoteTotals, SavedQuote } from "./types";
 
 export function lineItemTotal(item: Pick<QuoteLineItem, "quantity" | "unitPrice">): number {
   return roundCurrency(item.quantity * item.unitPrice);
@@ -29,17 +29,43 @@ export function createLineItem(
   };
 }
 
-export function createEmptyQuote(): QuoteDraft {
+export function createEmptyQuote(
+  options: { quoteNumber?: string; issueDate?: string } = {},
+): QuoteDraft {
   const validUntil = new Date();
   validUntil.setDate(validUntil.getDate() + 14);
 
   return {
+    quoteNumber: options.quoteNumber ?? "",
+    issueDate: options.issueDate ?? new Date().toISOString().slice(0, 10),
     clientName: "",
     projectTitle: "",
     validUntil: validUntil.toISOString().slice(0, 10),
     taxRatePercent: 8.25,
     lineItems: [createLineItem({ description: "", quantity: 1, unitPrice: 0 })],
   };
+}
+
+const QUOTE_NUMBER_PATTERN = /^Q-(\d{4})-(\d{4})$/;
+
+export function generateNextQuoteNumber(
+  existingQuotes: Array<Pick<SavedQuote, "quoteNumber">>,
+  now = new Date(),
+): string {
+  const year = now.getFullYear();
+  let maxSequence = 0;
+
+  for (const quote of existingQuotes) {
+    const match = quote.quoteNumber?.match(QUOTE_NUMBER_PATTERN);
+    if (!match || Number(match[1]) !== year) continue;
+    maxSequence = Math.max(maxSequence, Number(match[2]));
+  }
+
+  return `Q-${year}-${String(maxSequence + 1).padStart(4, "0")}`;
+}
+
+export function formatQuoteNumberLabel(quoteNumber: string): string {
+  return quoteNumber.trim() || "Draft";
 }
 
 export function formatCurrency(amount: number, locale = "en-US", currency = "USD"): string {

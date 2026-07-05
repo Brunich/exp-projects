@@ -16,6 +16,8 @@ import {
 import type { QuoteDraft, SavedQuote } from "./types";
 
 const sampleDraft: QuoteDraft = {
+  quoteNumber: "Q-2026-0001",
+  issueDate: "2026-07-04",
   clientName: "Jane Smith",
   projectTitle: "Spring cleanup",
   validUntil: "2026-07-18",
@@ -27,6 +29,8 @@ const sampleDraft: QuoteDraft = {
 
 const sampleSavedQuote: SavedQuote = {
   id: "quote-1",
+  quoteNumber: "Q-2026-0001",
+  issueDate: "2026-07-04",
   createdAt: "2026-07-04T10:00:00.000Z",
   updatedAt: "2026-07-04T10:00:00.000Z",
   ...sampleDraft,
@@ -70,23 +74,46 @@ describe("parseSavedQuotes", () => {
     const stored = serializeSavedQuotes([sampleSavedQuote]);
     expect(parseSavedQuotes(stored, [])).toEqual([sampleSavedQuote]);
   });
+
+  it("assigns quote metadata to legacy saved quotes", () => {
+    const legacy = {
+      id: "quote-legacy",
+      createdAt: "2026-06-01T10:00:00.000Z",
+      updatedAt: "2026-06-01T10:00:00.000Z",
+      clientName: "Legacy Client",
+      projectTitle: "Old project",
+      validUntil: "2026-06-15",
+      taxRatePercent: 0,
+      lineItems: sampleDraft.lineItems,
+    };
+
+    const parsed = parseSavedQuotes(JSON.stringify([legacy]), []);
+    expect(parsed[0]?.quoteNumber).toBe("Q-2026-0001");
+    expect(parsed[0]?.issueDate).toBe("2026-06-01");
+  });
 });
 
 describe("draftToSavedQuote", () => {
-  it("trims client and project fields", () => {
+  it("trims client and project fields and assigns quote number when missing", () => {
     const quote = draftToSavedQuote(
       {
         ...sampleDraft,
+        quoteNumber: "",
         clientName: "  Jane Smith  ",
         projectTitle: "  Spring cleanup  ",
       },
       "quote-2",
-      { createdAt: "2026-07-04T10:00:00.000Z", templateId: "cleaning" },
+      {
+        createdAt: "2026-07-04T10:00:00.000Z",
+        templateId: "cleaning",
+        existingQuotes: [sampleSavedQuote],
+      },
     );
 
     expect(quote.clientName).toBe("Jane Smith");
     expect(quote.projectTitle).toBe("Spring cleanup");
     expect(quote.templateId).toBe("cleaning");
+    expect(quote.quoteNumber).toBe("Q-2026-0002");
   });
 });
 
