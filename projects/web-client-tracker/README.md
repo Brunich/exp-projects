@@ -10,6 +10,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - Client table with status badges and follow-up urgency
 - Overdue follow-up alert banner
 - Email reminder drafts with mailto links and optional SMTP bulk send
+- Daily cron job to auto-send overdue reminders when SMTP is configured
 - Status filter (lead, active, negotiating, paused, closed)
 - Add and edit clients with form validation
 - Archive clients with restore and permanent delete
@@ -73,6 +74,9 @@ data/
 | `SMTP_USER`           | SMTP username                                           |
 | `SMTP_PASS`           | SMTP password                                           |
 | `SMTP_FROM`           | From address for sent reminders                         |
+| `CRON_SECRET`         | Bearer token for `/api/cron/reminders` (set in Vercel for cron auth) |
+| `REMINDER_CRON_SENDER_EMAIL` | Reply-from email used by the daily cron job      |
+| `REMINDER_CRON_SENDER_NAME`  | Display name for cron-sent reminders (optional)  |
 
 ## API
 
@@ -86,17 +90,28 @@ All `/api/clients` routes require an active session cookie (log in first).
 - `GET /api/clients/export?scope=archived` — download archived clients as CSV
 - `GET /api/clients/reminders` — list overdue follow-up email drafts
 - `POST /api/clients/reminders` — send reminders via SMTP when configured
+- `GET /api/cron/reminders` — daily scheduled send (requires `Authorization: Bearer <CRON_SECRET>`)
 
 See `docs/api-contract.md` for request/response shapes.
+
+## Scheduled reminders
+
+When SMTP and cron env vars are set, Vercel runs `GET /api/cron/reminders` every day at 09:00 UTC (`vercel.json`). The job sends reminders for overdue clients who have not already been reminded today.
+
+Required for cron:
+
+1. All SMTP variables above
+2. `CRON_SECRET` — Vercel sends this as a bearer token automatically
+3. `REMINDER_CRON_SENDER_EMAIL` — shown as the reply-to sender in reminder emails
 
 ## Deploy (Vercel)
 
 1. Import the `projects/web-client-tracker` directory in Vercel.
 2. Set `NEXT_PUBLIC_APP_URL` to your production URL.
-3. For persistent storage on Vercel, mount a volume or swap `CLIENTS_FILE` for a hosted database.
+3. Set `CRON_SECRET`, SMTP vars, and `REMINDER_CRON_SENDER_EMAIL` for automated reminders.
+4. For persistent storage on Vercel, mount a volume or swap `CLIENTS_FILE` for a hosted database.
 
 ## Next steps
 
 - Replace file store with Supabase or Postgres for multi-instance deploys
-- Scheduled cron to auto-send reminders when SMTP is configured
 - Slack/webhook notifications for overdue follow-ups
