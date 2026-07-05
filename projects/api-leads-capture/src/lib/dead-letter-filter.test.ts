@@ -3,6 +3,7 @@ import {
   filterQueueItems,
   matchesQueueFilter,
   parseDeadLetterFilter,
+  parseWebhookQueueQuery,
 } from "./dead-letter-filter.js";
 import type { WebhookQueueItem } from "./webhook-queue.js";
 
@@ -46,6 +47,36 @@ describe("parseDeadLetterFilter", () => {
       deadAfter: "2026-07-05T00:00:00.000Z",
       deadBefore: "2026-07-01T00:00:00.000Z",
     });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("parseWebhookQueueQuery", () => {
+  it("parses csv format with dead-letter filters", () => {
+    const result = parseWebhookQueueQuery({
+      format: "csv",
+      status: "dead",
+      source: "ads",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.query.format).toBe("csv");
+      expect(result.query.filter.status).toBe("dead");
+      expect(result.query.filter.source).toBe("ads");
+    }
+  });
+
+  it("defaults format to json", () => {
+    const result = parseWebhookQueueQuery({ status: "pending" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.query.format).toBe("json");
+    }
+  });
+
+  it("rejects invalid format values", () => {
+    const result = parseWebhookQueueQuery({ format: "xml" });
     expect(result.ok).toBe(false);
   });
 });

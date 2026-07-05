@@ -17,6 +17,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - Failed webhook deliveries queued with exponential backoff retries
 - Background worker processes the retry queue on an interval
 - `GET /webhooks/queue` — inspect pending and dead webhook deliveries (API key required)
+- `GET /webhooks/queue?format=csv` — export filtered queue items as CSV (API key required)
 - `POST /webhooks/queue/:id/replay` — replay a dead-letter webhook delivery (API key required)
 - `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
 
@@ -178,6 +179,17 @@ Optional query filters:
 | `source` | Lead source: `landing`, `referral`, `ads`, `other` |
 | `deadAfter` | ISO datetime — include items with `updatedAt` on or after this time |
 | `deadBefore` | ISO datetime — include items with `updatedAt` on or before this time |
+| `format` | Response format: `json` (default) or `csv` |
+
+**CSV export (`format=csv`)**
+
+Returns `text/csv` with a download filename like `dead-letters-2026-07-05.csv`. Filters (`status`, `source`, `deadAfter`, `deadBefore`) still apply. Use `status=dead` to export only failed webhook deliveries.
+
+```bash
+curl "http://localhost:3001/webhooks/queue?format=csv&status=dead" \
+  -H "x-api-key: dev-api-key-change-me" \
+  -o dead-letters.csv
+```
 
 ### `POST /webhooks/queue/:id/replay`
 
@@ -247,6 +259,10 @@ curl "http://localhost:3001/leads?source=landing&q=pricing&limit=20" \
 
 curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAfter=2026-07-01T00:00:00.000Z" \
   -H "x-api-key: dev-api-key-change-me"
+
+curl "http://localhost:3001/webhooks/queue?format=csv&status=dead" \
+  -H "x-api-key: dev-api-key-change-me" \
+  -o dead-letters.csv
 ```
 
 ## Next steps

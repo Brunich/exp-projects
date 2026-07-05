@@ -4,7 +4,12 @@ import { isAuthorized } from "../lib/auth.js";
 import {
   filterQueueItems,
   parseDeadLetterFilter,
+  parseWebhookQueueQuery,
 } from "../lib/dead-letter-filter.js";
+import {
+  buildDeadLettersCsv,
+  deadLettersCsvFilename,
+} from "../lib/csv-export.js";
 import { processWebhookQueue } from "../lib/webhook-queue.js";
 import type { ApiErrorBody } from "../types.js";
 
@@ -45,23 +50,35 @@ export async function registerWebhookRoutes(
       });
     }
 
-    const parsedFilter = parseDeadLetterFilter(
+    const parsedQuery = parseWebhookQueueQuery(
       request.query as Record<string, unknown>,
     );
 
-    if (!parsedFilter.ok) {
-      return reply.status(400).send(validationError(parsedFilter.details));
+    if (!parsedQuery.ok) {
+      return reply.status(400).send(validationError(parsedQuery.details));
     }
 
     const items = filterQueueItems(
       config.webhookQueue.list(),
-      parsedFilter.filter,
+      parsedQuery.query.filter,
     );
+
+    if (parsedQuery.query.format === "csv") {
+      const csv = buildDeadLettersCsv(items);
+
+      return reply
+        .header("content-type", "text/csv; charset=utf-8")
+        .header(
+          "content-disposition",
+          `attachment; filename="${deadLettersCsvFilename()}"`,
+        )
+        .send(csv);
+    }
 
     return reply.send({
       data: {
         stats: config.webhookQueue.stats(),
-        filter: parsedFilter.filter,
+        filter: parsedQuery.query.filter,
         items,
       },
     });

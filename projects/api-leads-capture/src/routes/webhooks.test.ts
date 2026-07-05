@@ -287,6 +287,64 @@ describe("webhook queue routes", () => {
     expect(response.json().data.items).toHaveLength(1);
     expect(response.json().data.items[0].status).toBe("pending");
   });
+
+  it("exports dead-letter queue items as CSV", async () => {
+    webhookQueue.clear();
+    const now = new Date("2026-07-04T10:00:00.000Z");
+
+    const item = webhookQueue.enqueue(
+      {
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        name: "Dead Export",
+        email: "dead-export@example.com",
+        company: "Acme, LLC",
+        message: "Needs follow-up",
+        source: "ads",
+        createdAt: now.toISOString(),
+      },
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+      now,
+    );
+
+    webhookQueue.recordFailure(
+      item.id,
+      { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+      now,
+    );
+    webhookQueue.recordFailure(
+      item.id,
+      { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+      now,
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/webhooks/queue?format=csv&status=dead",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/csv");
+    expect(response.headers["content-disposition"]).toContain(
+      "dead-letters-",
+    );
+    expect(response.body).toContain("queue_id,lead_id");
+    expect(response.body).toContain("dead-export@example.com");
+    expect(response.body).toContain('"Acme, LLC"');
+    expect(response.body).toContain("Webhook returned 503");
+  });
+
+  it("rejects invalid format on GET /webhooks/queue", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/webhooks/queue?format=xml",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("POST /leads webhook retry queue", () => {

@@ -19,6 +19,53 @@ export const deadLetterFilterSchema = z
 
 export type DeadLetterFilter = z.infer<typeof deadLetterFilterSchema>;
 
+export type WebhookQueueFormat = "json" | "csv";
+
+export interface WebhookQueueQuery {
+  filter: DeadLetterFilter;
+  format: WebhookQueueFormat;
+}
+
+export function parseWebhookQueueQuery(
+  query: Record<string, unknown>,
+):
+  | { ok: true; query: WebhookQueueQuery }
+  | { ok: false; details: Record<string, string[]> } {
+  const details: Record<string, string[]> = {};
+
+  let format: WebhookQueueFormat = "json";
+  if (query.format !== undefined) {
+    const value = String(query.format);
+    if (value !== "json" && value !== "csv") {
+      details.format = ["Must be json or csv"];
+    } else {
+      format = value;
+    }
+  }
+
+  const { format: _format, ...filterQuery } = query;
+  const parsedFilter = parseDeadLetterFilter(filterQuery);
+
+  if (!parsedFilter.ok) {
+    for (const [key, messages] of Object.entries(parsedFilter.details)) {
+      details[key] = messages;
+    }
+    return { ok: false, details };
+  }
+
+  if (Object.keys(details).length > 0) {
+    return { ok: false, details };
+  }
+
+  return {
+    ok: true,
+    query: {
+      filter: parsedFilter.filter,
+      format,
+    },
+  };
+}
+
 export function parseDeadLetterFilter(
   query: Record<string, unknown>,
 ):
