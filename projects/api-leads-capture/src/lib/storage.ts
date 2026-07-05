@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
-import { filterLeads, type LeadListQuery } from "./lead-filters.js";
+import { filterLeads, filterLeadsForExport, type LeadListQuery } from "./lead-filters.js";
 import type { Lead, LeadInput } from "../types.js";
 
 const leadSchema = z.object({
@@ -44,6 +44,10 @@ export class LeadStore {
     }
 
     return filterLeads(this.leads, query);
+  }
+
+  listForExport(query: Pick<LeadListQuery, "source" | "q" | "since">): Lead[] {
+    return filterLeadsForExport(this.leads, query);
   }
 
   create(input: LeadInput): Lead {

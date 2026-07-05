@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Lead } from "../types.js";
-import { filterLeads, parseLeadListQuery } from "./lead-filters.js";
+import { filterLeads, filterLeadsForExport, parseLeadListQuery } from "./lead-filters.js";
 
 const sampleLeads: Lead[] = [
   {
@@ -74,6 +74,25 @@ describe("parseLeadListQuery", () => {
       expect(result.details.since).toBeDefined();
     }
   });
+
+  it("parses csv format", () => {
+    const result = parseLeadListQuery({ format: "csv", source: "ads" });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.query.format).toBe("csv");
+      expect(result.query.source).toBe("ads");
+    }
+  });
+
+  it("rejects unknown format values", () => {
+    const result = parseLeadListQuery({ format: "xlsx" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.details.format).toBeDefined();
+    }
+  });
 });
 
 describe("filterLeads", () => {
@@ -130,5 +149,12 @@ describe("filterLeads", () => {
     expect(result.data).toHaveLength(1);
     expect(result.data[0].name).toBe("Marco Ruiz");
     expect(result.meta).toEqual({ total: 3, limit: 1, offset: 1 });
+  });
+
+  it("exports all matching leads without pagination", () => {
+    const exported = filterLeadsForExport(sampleLeads, { source: "landing" });
+
+    expect(exported).toHaveLength(1);
+    expect(exported[0].name).toBe("Marco Ruiz");
   });
 });

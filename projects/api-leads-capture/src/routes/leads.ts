@@ -7,6 +7,7 @@ import {
   isHoneypotTriggered,
 } from "../lib/honeypot.js";
 import { parseLeadListQuery } from "../lib/lead-filters.js";
+import { buildLeadsCsv, leadsCsvFilename } from "../lib/csv-export.js";
 import { validateLeadInput } from "../lib/validation.js";
 import { notifyLeadWebhook } from "../lib/webhook.js";
 import type { ApiErrorBody } from "../types.js";
@@ -51,6 +52,19 @@ export async function registerLeadRoutes(
           details: parsed.details,
         },
       });
+    }
+
+    if (parsed.query.format === "csv") {
+      const leads = config.store.listForExport(parsed.query);
+      const csv = buildLeadsCsv(leads);
+
+      return reply
+        .header("content-type", "text/csv; charset=utf-8")
+        .header(
+          "content-disposition",
+          `attachment; filename="${leadsCsvFilename()}"`,
+        )
+        .send(csv);
     }
 
     return reply.send(config.store.list(parsed.query));

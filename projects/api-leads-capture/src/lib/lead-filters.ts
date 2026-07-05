@@ -4,12 +4,15 @@ const LEAD_SOURCES: LeadSource[] = ["landing", "referral", "ads", "other"];
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
+export type LeadListFormat = "json" | "csv";
+
 export interface LeadListQuery {
   source?: LeadSource;
   q?: string;
   since?: string;
   limit: number;
   offset: number;
+  format?: LeadListFormat;
 }
 
 export interface LeadListResult {
@@ -83,6 +86,15 @@ export function parseLeadListQuery(
     }
   }
 
+  if (query.format !== undefined) {
+    const format = String(query.format);
+    if (format !== "json" && format !== "csv") {
+      details.format = ["Must be json or csv"];
+    } else {
+      parsed.format = format;
+    }
+  }
+
   if (Object.keys(details).length > 0) {
     return { ok: false, details };
   }
@@ -91,6 +103,32 @@ export function parseLeadListQuery(
 }
 
 export function filterLeads(leads: Lead[], query: LeadListQuery): LeadListResult {
+  const filtered = applyLeadFilters(leads, query);
+
+  const total = filtered.length;
+  const data = filtered.slice(query.offset, query.offset + query.limit);
+
+  return {
+    data,
+    meta: {
+      total,
+      limit: query.limit,
+      offset: query.offset,
+    },
+  };
+}
+
+export function filterLeadsForExport(
+  leads: Lead[],
+  query: Pick<LeadListQuery, "source" | "q" | "since">,
+): Lead[] {
+  return applyLeadFilters(leads, query);
+}
+
+function applyLeadFilters(
+  leads: Lead[],
+  query: Pick<LeadListQuery, "source" | "q" | "since">,
+): Lead[] {
   let filtered = leads;
 
   if (query.source) {
@@ -109,21 +147,7 @@ export function filterLeads(leads: Lead[], query: LeadListQuery): LeadListResult
     filtered = filtered.filter((lead) => matchesSearch(lead, needle));
   }
 
-  const sorted = [...filtered].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  );
-
-  const total = sorted.length;
-  const data = sorted.slice(query.offset, query.offset + query.limit);
-
-  return {
-    data,
-    meta: {
-      total,
-      limit: query.limit,
-      offset: query.offset,
-    },
-  };
+  return [...filtered].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 function matchesSearch(lead: Lead, needle: string): boolean {

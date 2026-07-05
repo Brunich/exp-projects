@@ -9,7 +9,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `POST /leads` — public endpoint for form submissions with Zod validation
 - Honeypot field check (`website` by default) silently rejects bots with a decoy 201
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
-- `GET /leads` — list stored leads with optional filters and pagination (API key required)
+- `GET /leads` — list stored leads with optional filters, pagination, and CSV export (API key required)
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
@@ -104,6 +104,7 @@ Optional query parameters:
 | `since`  | Only leads created on or after `YYYY-MM-DD`              |
 | `limit`  | Page size (1–100, default `50`)                        |
 | `offset` | Skip N matching leads (default `0`)                    |
+| `format` | Response format: `json` (default) or `csv`             |
 
 **Response `200`**
 
@@ -116,6 +117,16 @@ Optional query parameters:
     "offset": 0
   }
 }
+```
+
+**CSV export (`format=csv`)**
+
+Returns `text/csv` with a download filename like `leads-2026-07-05.csv`. Filters (`source`, `q`, `since`) still apply, but pagination is ignored so all matching leads are included.
+
+```bash
+curl "http://localhost:3001/leads?format=csv&since=2026-07-01" \
+  -H "x-api-key: dev-api-key-change-me" \
+  -o leads.csv
 ```
 
 ### Webhook payload

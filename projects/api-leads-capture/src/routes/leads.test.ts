@@ -119,6 +119,32 @@ describe("lead routes", () => {
     expect(response.json().error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("exports filtered leads as CSV when format=csv", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "CSV Export",
+        email: "csv@example.com",
+        company: "Export Co",
+        source: "ads",
+      },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/leads?format=csv&source=ads",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/csv");
+    expect(response.headers["content-disposition"]).toMatch(/leads-\d{4}-\d{2}-\d{2}\.csv/);
+    expect(response.body).toContain("id,name,email,company,message,source,created_at");
+    expect(response.body).toContain("csv@example.com");
+    expect(response.body).toContain("Export Co");
+  });
+
   it("accepts submissions with an empty honeypot field", async () => {
     const beforeCount = store.count();
 
