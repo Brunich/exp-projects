@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Client, ClientStatus } from "@/lib/types";
+import {
+  DEFAULT_CLIENT_LIST_FILTERS,
+  resolveEscapeFilterAction,
+  shouldHandleFocusSearch,
+} from "@/lib/client-filter-shortcuts";
 import {
   daysUntilFollowUp,
   filterClients,
@@ -23,6 +28,7 @@ interface ClientTableProps {
   clients: Client[];
   showArchived?: boolean;
   disabled?: boolean;
+  shortcutsDisabled?: boolean;
   selectable?: boolean;
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
@@ -45,6 +51,7 @@ export function ClientTable({
   clients,
   showArchived = false,
   disabled = false,
+  shortcutsDisabled = false,
   selectable = false,
   selectedIds = [],
   onSelectionChange,
@@ -57,6 +64,55 @@ export function ClientTable({
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  function resetFilters() {
+    setSearchQuery(DEFAULT_CLIENT_LIST_FILTERS.searchQuery);
+    setStatusFilter(DEFAULT_CLIENT_LIST_FILTERS.statusFilter);
+    setOverdueOnly(DEFAULT_CLIENT_LIST_FILTERS.overdueOnly);
+  }
+
+  useEffect(() => {
+    if (shortcutsDisabled) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (shouldHandleFocusSearch(event, event.target)) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (event.key !== "Escape") return;
+
+      const searchFocused =
+        document.activeElement === searchInputRef.current;
+      const action = resolveEscapeFilterAction(
+        { searchQuery, statusFilter, overdueOnly },
+        searchFocused,
+      );
+
+      if (!action) return;
+
+      event.preventDefault();
+
+      if (action === "clear-search") {
+        setSearchQuery("");
+        return;
+      }
+
+      if (action === "reset-all") {
+        resetFilters();
+        searchInputRef.current?.blur();
+        return;
+      }
+
+      searchInputRef.current?.blur();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shortcutsDisabled, searchQuery, statusFilter, overdueOnly]);
 
   const visibleClients = sortClientsByFollowUp(
     filterClients(clients, {
@@ -106,12 +162,26 @@ export function ClientTable({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-zinc-700">
-            <span className="font-medium">Search</span>
+            <span className="flex items-center justify-between gap-2 font-medium">
+              Search
+              <span className="hidden text-xs font-normal text-zinc-400 sm:inline">
+                <kbd className="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px]">
+                  /
+                </kbd>{" "}
+                or{" "}
+                <kbd className="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px]">
+                  ⌘K
+                </kbd>{" "}
+                · Esc resets
+              </span>
+            </span>
             <input
+              ref={searchInputRef}
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Name or company"
+              aria-keyshortcuts="/ Control+K Meta+K"
               className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
           </label>

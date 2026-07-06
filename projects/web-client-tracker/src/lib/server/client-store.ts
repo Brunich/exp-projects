@@ -99,7 +99,7 @@ export class ClientStore {
       entries.push(createActivity("note", { text: nextNotes }));
     }
 
-    let updated = {
+    let updated: Client = {
       ...base,
       archivedAt: existing.archivedAt,
       lastReminderAt: existing.lastReminderAt,

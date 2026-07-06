@@ -47,6 +47,11 @@ export function ClientsDashboard() {
   );
   const [activityClient, setActivityClient] = useState<Client | null>(null);
 
+  const shortcutsDisabled =
+    formMode !== null ||
+    pendingAction !== null ||
+    activityClient !== null;
+
   const activeClients = filterActiveClients(clients);
   const archivedClients = filterArchivedClients(clients);
   const overdue = getClientsNeedingFollowUp(clients);
@@ -241,6 +246,7 @@ export function ClientsDashboard() {
           showArchived
           selectable
           selectedIds={selectedIds}
+          shortcutsDisabled={shortcutsDisabled}
           onSelectionChange={setSelectedIds}
           onViewActivity={setActivityClient}
           onRestore={handleRestore}
@@ -252,6 +258,7 @@ export function ClientsDashboard() {
           clients={activeClients}
           selectable
           selectedIds={selectedIds}
+          shortcutsDisabled={shortcutsDisabled}
           onSelectionChange={setSelectedIds}
           onEdit={openEditForm}
           onViewActivity={setActivityClient}
