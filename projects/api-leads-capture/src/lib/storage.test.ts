@@ -13,12 +13,12 @@ describe("LeadStore file persistence", () => {
     }
   });
 
-  it("writes leads to disk and reloads them on restart", () => {
+  it("writes leads to disk and reloads them on restart", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "leads-store-"));
     const filePath = join(tempDir, "leads.json");
 
     const writer = new LeadStore({ filePath });
-    const lead = writer.create({
+    const lead = await writer.create({
       name: "Ana Lopez",
       email: "ana@example.com",
       message: "Pricing question",
@@ -28,7 +28,7 @@ describe("LeadStore file persistence", () => {
     expect(readFileSync(filePath, "utf-8")).toContain("ana@example.com");
 
     const reader = new LeadStore({ filePath });
-    const { data: leads } = reader.list();
+    const { data: leads } = await reader.list();
 
     expect(leads).toHaveLength(1);
     expect(leads[0]).toMatchObject({
@@ -39,34 +39,34 @@ describe("LeadStore file persistence", () => {
     });
   });
 
-  it("creates parent directories when the data path is nested", () => {
+  it("creates parent directories when the data path is nested", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "leads-store-"));
     const filePath = join(tempDir, "data", "leads.json");
 
     const store = new LeadStore({ filePath });
-    store.create({
+    await store.create({
       name: "Nested Path",
       email: "nested@example.com",
     });
 
     const reloaded = new LeadStore({ filePath });
-    expect(reloaded.count()).toBe(1);
+    expect(await reloaded.count()).toBe(1);
   });
 
-  it("starts empty when the file does not exist yet", () => {
+  it("starts empty when the file does not exist yet", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "leads-store-"));
     const filePath = join(tempDir, "missing.json");
 
     const store = new LeadStore({ filePath });
-    expect(store.count()).toBe(0);
+    expect(await store.count()).toBe(0);
   });
 
-  it("throws when the file contains invalid JSON", () => {
+  it("throws when the file contains invalid JSON", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "leads-store-"));
     const filePath = join(tempDir, "bad.json");
 
     const store = new LeadStore({ filePath });
-    store.create({ name: "Valid", email: "valid@example.com" });
+    await store.create({ name: "Valid", email: "valid@example.com" });
 
     const corrupt = readFileSync(filePath, "utf-8").replace("{", "");
     rmSync(filePath);
@@ -75,27 +75,27 @@ describe("LeadStore file persistence", () => {
     expect(() => new LeadStore({ filePath })).toThrow(/Invalid JSON/);
   });
 
-  it("finds leads by email with case-insensitive matching", () => {
+  it("finds leads by email with case-insensitive matching", async () => {
     const store = new LeadStore();
-    const lead = store.create({
+    const lead = await store.create({
       name: "Ana Lopez",
       email: "ana@example.com",
     });
 
-    expect(store.findByEmail("ANA@EXAMPLE.COM")).toEqual(lead);
-    expect(store.findByEmail("other@example.com")).toBeUndefined();
+    expect(await store.findByEmail("ANA@EXAMPLE.COM")).toEqual(lead);
+    expect(await store.findByEmail("other@example.com")).toBeUndefined();
   });
 
-  it("updates an existing lead by email without changing id or createdAt", () => {
+  it("updates an existing lead by email without changing id or createdAt", async () => {
     const store = new LeadStore();
-    const original = store.create({
+    const original = await store.create({
       name: "Original Name",
       email: "upsert@example.com",
       message: "First message",
       source: "landing",
     });
 
-    const updated = store.updateByEmail("  UPSERT@example.com ", {
+    const updated = await store.updateByEmail("  UPSERT@example.com ", {
       name: "Updated Name",
       email: "upsert@example.com",
       message: "Updated message",
@@ -110,7 +110,9 @@ describe("LeadStore file persistence", () => {
       message: "Updated message",
       source: "referral",
     });
-    expect(store.count()).toBe(1);
-    expect(store.findByEmail("upsert@example.com")?.name).toBe("Updated Name");
+    expect(await store.count()).toBe(1);
+    expect((await store.findByEmail("upsert@example.com"))?.name).toBe(
+      "Updated Name",
+    );
   });
 });

@@ -1,7 +1,7 @@
 import { buildApp, defaultAppConfig } from "./app.js";
 import { parseLeadDedupMode } from "./lib/lead-dedup.js";
 import { parseRateLimitConfig } from "./lib/rate-limit.js";
-import { LeadStore } from "./lib/storage.js";
+import { createLeadStore } from "./lib/create-lead-store.js";
 import {
   processWebhookQueue,
   startWebhookWorker,
@@ -22,7 +22,12 @@ const webhookWorkerIntervalMs = Number(
   process.env.WEBHOOK_WORKER_INTERVAL_MS ?? 30_000,
 );
 
-const store = new LeadStore({ filePath: leadsFile });
+const store = createLeadStore({
+  leadsFile,
+  supabaseUrl: process.env.SUPABASE_URL,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  supabaseTable: process.env.SUPABASE_LEADS_TABLE,
+});
 const webhookQueue = webhookUrl
   ? new WebhookQueueStore({
       filePath: webhookQueueFile,

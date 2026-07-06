@@ -9,7 +9,7 @@ describe("lead routes", () => {
   const apiKey = "test-api-key";
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     app = await buildApp(
       defaultAppConfig({
         apiKey,
@@ -146,7 +146,7 @@ describe("lead routes", () => {
   });
 
   it("accepts submissions with an empty honeypot field", async () => {
-    const beforeCount = store.count();
+    const beforeCount = await store.count();
 
     const response = await app.inject({
       method: "POST",
@@ -159,11 +159,11 @@ describe("lead routes", () => {
     });
 
     expect(response.statusCode).toBe(201);
-    expect(store.count()).toBe(beforeCount + 1);
+    expect(await store.count()).toBe(beforeCount + 1);
   });
 
   it("returns decoy success when honeypot is filled without storing", async () => {
-    const beforeCount = store.count();
+    const beforeCount = await store.count();
 
     const response = await app.inject({
       method: "POST",
@@ -177,11 +177,11 @@ describe("lead routes", () => {
 
     expect(response.statusCode).toBe(201);
     expect(response.json().data.email).toBe("bot@spam.com");
-    expect(store.count()).toBe(beforeCount);
+    expect(await store.count()).toBe(beforeCount);
   });
 
   it("returns existing lead when email is a duplicate", async () => {
-    const countBefore = store.count();
+    const countBefore = await store.count();
 
     const first = await app.inject({
       method: "POST",
@@ -195,7 +195,7 @@ describe("lead routes", () => {
 
     expect(first.statusCode).toBe(201);
     const original = first.json().data;
-    expect(store.count()).toBe(countBefore + 1);
+    expect(await store.count()).toBe(countBefore + 1);
 
     const duplicate = await app.inject({
       method: "POST",
@@ -213,7 +213,7 @@ describe("lead routes", () => {
     expect(body.data.id).toBe(original.id);
     expect(body.data.name).toBe("Original Name");
     expect(body.data.email).toBe("dup@example.com");
-    expect(store.count()).toBe(countBefore + 1);
+    expect(await store.count()).toBe(countBefore + 1);
   });
 });
 
@@ -222,7 +222,7 @@ describe("POST /leads upsert mode", () => {
   const store = new LeadStore();
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     app = await buildApp(
       defaultAppConfig({
         apiKey: "test-api-key",
@@ -275,7 +275,7 @@ describe("POST /leads upsert mode", () => {
       message: "Updated message",
       source: "ads",
     });
-    expect(store.count()).toBe(1);
+    expect(await store.count()).toBe(1);
   });
 });
 
@@ -286,7 +286,7 @@ describe("POST /leads duplicate webhook behavior", () => {
   const originalFetch = globalThis.fetch;
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     webhookCalls = 0;
 
     globalThis.fetch = (async () => {
@@ -345,7 +345,7 @@ describe("POST /leads rate limiting", () => {
   const store = new LeadStore();
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     app = await buildApp(
       defaultAppConfig({
         apiKey: "test-api-key",

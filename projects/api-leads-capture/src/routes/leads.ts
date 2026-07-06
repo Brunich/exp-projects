@@ -55,7 +55,7 @@ export async function registerLeadRoutes(
     }
 
     if (parsed.query.format === "csv") {
-      const leads = config.store.listForExport(parsed.query);
+      const leads = await config.store.listForExport(parsed.query);
       const csv = buildLeadsCsv(leads);
 
       return reply
@@ -67,7 +67,7 @@ export async function registerLeadRoutes(
         .send(csv);
     }
 
-    return reply.send(config.store.list(parsed.query));
+    return reply.send(await config.store.list(parsed.query));
   });
 
   await app.register(async (scoped) => {
@@ -97,10 +97,10 @@ export async function registerLeadRoutes(
         return reply.status(400).send(validationError(validation.details));
       }
 
-      const existing = config.store.findByEmail(validation.data.email);
+      const existing = await config.store.findByEmail(validation.data.email);
       if (existing) {
         if (config.leadDedupMode === "upsert") {
-          const updated = config.store.updateByEmail(
+          const updated = await config.store.updateByEmail(
             validation.data.email,
             validation.data,
           );
@@ -126,7 +126,7 @@ export async function registerLeadRoutes(
         });
       }
 
-      const lead = config.store.create(validation.data);
+      const lead = await config.store.create(validation.data);
 
       if (config.webhook?.url) {
         const webhookResult = await notifyLeadWebhook(lead, config.webhook);

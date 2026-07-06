@@ -51,6 +51,9 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `LEAD_DEDUP_MODE` | Duplicate email handling: `ignore` (default) or `upsert` |
 | `CRON_SECRET` | Bearer token for scheduled cron endpoints |
 | `DEAD_LETTER_RETENTION_DAYS` | Auto-purge dead letters older than N days (minimum `7`; unset disables cron purge) |
+| `SUPABASE_URL` | Optional Supabase project URL — enables shared Postgres storage for multi-instance deploys |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required with `SUPABASE_URL`) |
+| `SUPABASE_LEADS_TABLE` | Postgres table name for leads (default `leads`) |
 
 ## API
 
@@ -316,6 +319,22 @@ The workflow skips safely when secrets are not configured, so local-only clones 
 
 Ensure `DEAD_LETTER_RETENTION_DAYS` is set on the server (minimum `7`) or the cron endpoint returns `skipped: retention_not_configured`.
 
+## Supabase storage (multi-instance)
+
+By default leads are stored in a local JSON file (`LEADS_FILE`). For production deploys with multiple instances (Fly.io, Railway, serverless), set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to use a shared Postgres table instead.
+
+1. Create a Supabase project and run the migration in `supabase/migrations/001_leads.sql` (SQL editor or `supabase db push`).
+2. Copy the project URL and **service role** key into `.env`.
+3. Restart the API — `createLeadStore()` picks Supabase automatically when both vars are set.
+
+The table includes a generated `email_normalized` column for case-insensitive deduplication. File storage remains the default when Supabase env vars are unset, so local dev and single-node deploys work unchanged.
+
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_LEADS_TABLE=leads
+```
+
 ## Scripts
 
 | Command        | Description              |
@@ -352,4 +371,5 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 
 ## Next steps
 
-- Optional Supabase sync for multi-instance deploys
+- Webhook queue sync to Supabase for multi-instance retry workers
+- Lead stats summary endpoint (`GET /leads/stats`)

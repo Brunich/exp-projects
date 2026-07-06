@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import type { LeadStore } from "./lib/storage.js";
+import type { LeadStore } from "./lib/lead-store.js";
 import type { LeadDedupMode } from "./lib/lead-dedup.js";
 import type { RateLimitConfig } from "./lib/rate-limit.js";
 import { DEFAULT_RATE_LIMIT } from "./lib/rate-limit.js";
@@ -24,7 +24,7 @@ export async function buildApp(config: AppConfig) {
 
   app.get("/health", async () => ({
     status: "ok",
-    leadsStored: config.store.count(),
+    leadsStored: await config.store.count(),
     webhookQueue: config.webhookQueue?.stats(),
   }));
 

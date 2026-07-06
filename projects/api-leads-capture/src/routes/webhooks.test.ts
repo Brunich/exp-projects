@@ -11,7 +11,7 @@ describe("webhook queue routes", () => {
   const apiKey = "test-api-key";
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     webhookQueue.clear();
 
     app = await buildApp(
@@ -410,7 +410,7 @@ describe("POST /leads webhook retry queue", () => {
   const webhookQueue = new WebhookQueueStore({ maxAttempts: 3 });
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     webhookQueue.clear();
 
     app = await buildApp(

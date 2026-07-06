@@ -11,7 +11,7 @@ describe("cron routes", () => {
   const cronSecret = "cron-test-secret";
 
   beforeAll(async () => {
-    store.clear();
+    await store.clear();
     webhookQueue.clear();
 
     app = await buildApp(

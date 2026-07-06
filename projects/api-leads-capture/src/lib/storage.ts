@@ -9,7 +9,12 @@ import {
 import { dirname } from "node:path";
 import { z } from "zod";
 import { emailsMatch } from "./lead-dedup.js";
-import { filterLeads, filterLeadsForExport, type LeadListQuery } from "./lead-filters.js";
+import {
+  filterLeads,
+  filterLeadsForExport,
+  type LeadListQuery,
+} from "./lead-filters.js";
+import type { LeadStore } from "./lead-store.js";
 import type { Lead, LeadInput } from "../types.js";
 
 const leadSchema = z.object({
@@ -24,22 +29,22 @@ const leadSchema = z.object({
 
 const leadsFileSchema = z.array(leadSchema);
 
-export interface LeadStoreOptions {
+export interface FileLeadStoreOptions {
   filePath?: string;
 }
 
-export class LeadStore {
+export class FileLeadStore implements LeadStore {
   private leads: Lead[] = [];
   private readonly filePath?: string;
 
-  constructor(options: LeadStoreOptions = {}) {
+  constructor(options: FileLeadStoreOptions = {}) {
     this.filePath = options.filePath;
     if (this.filePath) {
       this.loadFromFile();
     }
   }
 
-  list(query?: LeadListQuery) {
+  async list(query?: LeadListQuery) {
     if (!query) {
       return filterLeads(this.leads, { limit: 50, offset: 0 });
     }
@@ -47,15 +52,20 @@ export class LeadStore {
     return filterLeads(this.leads, query);
   }
 
-  listForExport(query: Pick<LeadListQuery, "source" | "q" | "since">): Lead[] {
+  async listForExport(
+    query: Pick<LeadListQuery, "source" | "q" | "since">,
+  ): Promise<Lead[]> {
     return filterLeadsForExport(this.leads, query);
   }
 
-  findByEmail(email: string): Lead | undefined {
+  async findByEmail(email: string): Promise<Lead | undefined> {
     return this.leads.find((lead) => emailsMatch(lead.email, email));
   }
 
-  updateByEmail(email: string, input: LeadInput): Lead | undefined {
+  async updateByEmail(
+    email: string,
+    input: LeadInput,
+  ): Promise<Lead | undefined> {
     const index = this.leads.findIndex((lead) => emailsMatch(lead.email, email));
     if (index === -1) {
       return undefined;
@@ -76,7 +86,7 @@ export class LeadStore {
     return updated;
   }
 
-  create(input: LeadInput): Lead {
+  async create(input: LeadInput): Promise<Lead> {
     const lead: Lead = {
       id: randomUUID(),
       name: input.name,
@@ -92,11 +102,11 @@ export class LeadStore {
     return lead;
   }
 
-  count(): number {
+  async count(): Promise<number> {
     return this.leads.length;
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     this.leads = [];
     this.persistToFile();
   }
@@ -141,3 +151,8 @@ export class LeadStore {
     renameSync(tempPath, this.filePath);
   }
 }
+
+/** @deprecated Use FileLeadStore — kept for existing tests and imports. */
+export { FileLeadStore as LeadStore };
+
+export type LeadStoreOptions = FileLeadStoreOptions;
