@@ -20,6 +20,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `GET /webhooks/queue?format=csv` — export filtered queue items as CSV (API key required)
 - `POST /webhooks/queue/:id/replay` — replay a dead-letter webhook delivery (API key required)
 - `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
+- `DELETE /webhooks/queue/dead` — purge dead-letter webhook deliveries by date/source filter (API key required)
 
 ## Quick start
 
@@ -234,6 +235,25 @@ Requires API key. Requeues dead-letter items for immediate retry and runs the wo
 }
 ```
 
+### `DELETE /webhooks/queue/dead`
+
+Requires API key. Permanently removes dead-letter items from the queue. Accepts the same query filters as `GET /webhooks/queue` (`source`, `deadAfter`, `deadBefore`). Only items with `status=dead` are removed; pending retries are never deleted.
+
+Use `deadBefore` to drop old failures during housekeeping, for example dead letters last updated before the start of the month.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "purgedCount": 3,
+    "filter": { "deadBefore": "2026-07-01T00:00:00.000Z" },
+    "items": [{ "...purged queue item..." }],
+    "stats": { "pending": 0, "dead": 1, "total": 1 }
+  }
+}
+```
+
 ## Scripts
 
 | Command        | Description              |
@@ -263,6 +283,9 @@ curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAf
 curl "http://localhost:3001/webhooks/queue?format=csv&status=dead" \
   -H "x-api-key: dev-api-key-change-me" \
   -o dead-letters.csv
+
+curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T00:00:00.000Z" \
+  -H "x-api-key: dev-api-key-change-me"
 ```
 
 ## Next steps

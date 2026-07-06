@@ -170,4 +170,38 @@ export async function registerWebhookRoutes(
       throw error;
     }
   });
+
+  app.delete("/webhooks/queue/dead", async (request, reply) => {
+    if (!isAuthorized(request, config.apiKey)) {
+      return reply.status(401).send(unauthorizedError());
+    }
+
+    if (!config.webhookQueue) {
+      return reply.status(404).send({
+        error: {
+          code: "NOT_CONFIGURED",
+          message: "Webhook queue is not enabled",
+        },
+      });
+    }
+
+    const parsedFilter = parseDeadLetterFilter(
+      request.query as Record<string, unknown>,
+    );
+
+    if (!parsedFilter.ok) {
+      return reply.status(400).send(validationError(parsedFilter.details));
+    }
+
+    const purged = config.webhookQueue.purgeDeadLetters(parsedFilter.filter);
+
+    return reply.send({
+      data: {
+        purgedCount: purged.length,
+        filter: parsedFilter.filter,
+        items: purged,
+        stats: config.webhookQueue.stats(),
+      },
+    });
+  });
 }

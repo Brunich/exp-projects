@@ -210,6 +210,19 @@ export class WebhookQueueStore {
     return deadIds.map((id) => this.replayDeadLetter(id, now));
   }
 
+  purgeDeadLetters(filter?: DeadLetterFilter): WebhookQueueItem[] {
+    const toPurge = this.listDeadLetters(filter);
+    const purgeIds = new Set(toPurge.map((item) => item.id));
+
+    if (purgeIds.size === 0) {
+      return [];
+    }
+
+    this.items = this.items.filter((item) => !purgeIds.has(item.id));
+    this.persistToFile();
+    return toPurge;
+  }
+
   recordFailure(
     id: string,
     failure: WebhookResult,

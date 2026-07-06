@@ -345,6 +345,63 @@ describe("webhook queue routes", () => {
     expect(response.statusCode).toBe(400);
     expect(response.json().error.code).toBe("VALIDATION_ERROR");
   });
+
+  it("purges dead letters older than a cutoff date", async () => {
+    webhookQueue.clear();
+    const early = new Date("2026-07-04T10:00:00.000Z");
+    const late = new Date("2026-07-04T12:00:00.000Z");
+
+    for (const [id, email, when] of [
+      ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "old@example.com", early],
+      ["cccccccc-cccc-4ccc-8ccc-cccccccccccc", "new@example.com", late],
+    ] as const) {
+      const item = webhookQueue.enqueue(
+        {
+          id,
+          name: "Dead Letter",
+          email,
+          source: "landing",
+          createdAt: when.toISOString(),
+        },
+        { url: "https://hooks.example.com/leads" },
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+
+      webhookQueue.recordFailure(
+        item.id,
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+      webhookQueue.recordFailure(
+        item.id,
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+    }
+
+    expect(webhookQueue.stats().dead).toBe(2);
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/webhooks/queue/dead?deadBefore=2026-07-04T11:00:00.000Z",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.purgedCount).toBe(1);
+    expect(response.json().data.items[0].lead.email).toBe("old@example.com");
+    expect(webhookQueue.stats()).toEqual({ pending: 0, dead: 1, total: 1 });
+  });
+
+  it("requires API key to purge dead letters", async () => {
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/webhooks/queue/dead",
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
 });
 
 describe("POST /leads webhook retry queue", () => {

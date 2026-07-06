@@ -235,6 +235,61 @@ describe("WebhookQueueStore", () => {
       1,
     );
   });
+
+  it("purges dead letters matching date and source filters", () => {
+    const store = new WebhookQueueStore({ maxAttempts: 2 });
+    const early = new Date("2026-07-04T10:00:00.000Z");
+    const late = new Date("2026-07-04T12:00:00.000Z");
+
+    for (const [id, source, when] of [
+      ["77777777-7777-4777-8777-777777777777", "landing", early],
+      ["88888888-8888-4888-8888-888888888888", "ads", late],
+    ] as const) {
+      const item = store.enqueue(
+        {
+          id,
+          name: "Dead Letter",
+          email: `${source}@example.com`,
+          source,
+          createdAt: when.toISOString(),
+        },
+        { url: "https://hooks.example.com/leads" },
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+
+      store.recordFailure(
+        item.id,
+        { delivered: false, statusCode: 503, error: "Webhook returned 503" },
+        when,
+      );
+    }
+
+    const purged = store.purgeDeadLetters({
+      deadBefore: "2026-07-04T11:00:00.000Z",
+    });
+
+    expect(purged).toHaveLength(1);
+    expect(purged[0]?.lead.source).toBe("landing");
+    expect(store.stats()).toEqual({ pending: 0, dead: 1, total: 1 });
+  });
+
+  it("does not purge pending queue items", () => {
+    const store = new WebhookQueueStore({ maxAttempts: 3 });
+    const now = new Date("2026-07-04T10:00:00.000Z");
+
+    store.enqueue(
+      sampleLead,
+      { url: "https://hooks.example.com/leads" },
+      { delivered: false, error: "failed" },
+      now,
+    );
+
+    const purged = store.purgeDeadLetters();
+
+    expect(purged).toHaveLength(0);
+    expect(store.stats().pending).toBe(1);
+  });
 });
 
 describe("processWebhookQueue", () => {
