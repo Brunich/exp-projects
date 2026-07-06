@@ -301,6 +301,21 @@ curl -X GET "https://your-api.example.com/cron/purge-dead-letters" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
+### GitHub Actions scheduler
+
+This repo includes `.github/workflows/api-leads-purge-dead-letters.yml`, which calls the cron endpoint daily at 03:00 UTC (and supports manual runs via **Actions → Purge webhook dead letters → Run workflow**).
+
+Set these repository secrets in GitHub (**Settings → Secrets and variables → Actions**):
+
+| Secret | Description |
+| ------ | ----------- |
+| `LEADS_API_BASE_URL` | Deployed API origin, e.g. `https://leads-api.example.com` (no trailing slash) |
+| `LEADS_CRON_SECRET` | Same value as `CRON_SECRET` on the server |
+
+The workflow skips safely when secrets are not configured, so local-only clones do not fail scheduled runs.
+
+Ensure `DEAD_LETTER_RETENTION_DAYS` is set on the server (minimum `7`) or the cron endpoint returns `skipped: retention_not_configured`.
+
 ## Scripts
 
 | Command        | Description              |
