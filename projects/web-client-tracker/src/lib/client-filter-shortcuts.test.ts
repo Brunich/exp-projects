@@ -3,9 +3,11 @@ import {
   DEFAULT_CLIENT_LIST_FILTERS,
   hasActiveClientFilters,
   isEditableTarget,
+  matchesAddClientShortcut,
   matchesFocusSearchShortcut,
   matchesResetFiltersShortcut,
   resolveEscapeFilterAction,
+  shouldHandleAddClient,
   shouldHandleFocusSearch,
 } from "./client-filter-shortcuts";
 
@@ -112,6 +114,58 @@ describe("matchesResetFiltersShortcut", () => {
   it("matches escape", () => {
     expect(matchesResetFiltersShortcut({ key: "Escape" })).toBe(true);
     expect(matchesResetFiltersShortcut({ key: "Enter" })).toBe(false);
+  });
+});
+
+describe("matchesAddClientShortcut", () => {
+  it("matches n without modifiers", () => {
+    expect(
+      matchesAddClientShortcut({
+        key: "n",
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+      }),
+    ).toBe(true);
+    expect(
+      matchesAddClientShortcut({
+        key: "N",
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores modified keys", () => {
+    expect(
+      matchesAddClientShortcut({
+        key: "n",
+        metaKey: true,
+        ctrlKey: false,
+        altKey: false,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("shouldHandleAddClient", () => {
+  it("blocks n while typing in another field", () => {
+    expect(
+      shouldHandleAddClient(
+        { key: "n", metaKey: false, ctrlKey: false, altKey: false },
+        { tagName: "INPUT" },
+      ),
+    ).toBe(false);
+  });
+
+  it("allows n from the page background", () => {
+    expect(
+      shouldHandleAddClient(
+        { key: "n", metaKey: false, ctrlKey: false, altKey: false },
+        { tagName: "DIV" },
+      ),
+    ).toBe(true);
   });
 });
 

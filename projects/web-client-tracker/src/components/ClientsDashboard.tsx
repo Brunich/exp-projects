@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Client } from "@/lib/types";
 import type { ClientFormInput } from "@/lib/client-validation";
 import {
@@ -8,6 +8,7 @@ import {
   filterArchivedClients,
   getClientsNeedingFollowUp,
 } from "@/lib/clients";
+import { shouldHandleAddClient } from "@/lib/client-filter-shortcuts";
 import { useClientStorage } from "@/lib/use-client-storage";
 import { ClientActivityPanel } from "./ClientActivityPanel";
 import { ClientForm } from "./ClientForm";
@@ -51,6 +52,20 @@ export function ClientsDashboard() {
     formMode !== null ||
     pendingAction !== null ||
     activityClient !== null;
+
+  useEffect(() => {
+    if (shortcutsDisabled || showArchived || mutating) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!shouldHandleAddClient(event, event.target)) return;
+
+      event.preventDefault();
+      openCreateForm();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shortcutsDisabled, showArchived, mutating]);
 
   const activeClients = filterActiveClients(clients);
   const archivedClients = filterArchivedClients(clients);
@@ -148,9 +163,13 @@ export function ClientsDashboard() {
             type="button"
             onClick={openCreateForm}
             disabled={mutating}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
+            aria-keyshortcuts="n"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
           >
             Add client
+            <kbd className="hidden rounded border border-indigo-400/50 bg-indigo-500/30 px-1.5 py-0.5 font-mono text-[10px] font-normal sm:inline">
+              N
+            </kbd>
           </button>
         ) : null}
       </div>
