@@ -118,6 +118,7 @@ export async function bulkRestoreClients(ids: string[]): Promise<BulkActionResul
 export interface ReminderDraftsResponse {
   drafts: import("./email-reminders").ReminderEmailDraft[];
   smtpConfigured: boolean;
+  webhookConfigured: boolean;
   overdueCount: number;
 }
 
@@ -146,4 +147,17 @@ export async function sendReminderEmails(
     body: JSON.stringify(ids ? { ids } : {}),
   });
   return parseResponse<SendRemindersResult>(response);
+}
+
+export interface SendWebhookNotificationResult {
+  overdueCount: number;
+  delivered: boolean;
+  statusCode?: number;
+}
+
+export async function sendOverdueWebhookNotification(): Promise<SendWebhookNotificationResult> {
+  const response = await fetch("/api/clients/reminders/webhook", {
+    method: "POST",
+  });
+  return parseResponse<SendWebhookNotificationResult>(response);
 }

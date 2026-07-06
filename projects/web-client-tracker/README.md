@@ -10,6 +10,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - Client table with status badges and follow-up urgency
 - Overdue follow-up alert banner
 - Email reminder drafts with mailto links and optional SMTP bulk send
+- Slack or generic webhook notifications for overdue follow-up digests
 - Daily cron job to auto-send overdue reminders when SMTP is configured
 - Status filter (lead, active, negotiating, paused, closed)
 - Add and edit clients with form validation
@@ -77,6 +78,8 @@ data/
 | `CRON_SECRET`         | Bearer token for `/api/cron/reminders` (set in Vercel for cron auth) |
 | `REMINDER_CRON_SENDER_EMAIL` | Reply-from email used by the daily cron job      |
 | `REMINDER_CRON_SENDER_NAME`  | Display name for cron-sent reminders (optional)  |
+| `OVERDUE_WEBHOOK_URL`        | Slack incoming webhook or generic URL for overdue digests |
+| `OVERDUE_WEBHOOK_SECRET`     | Optional HMAC secret sent as `x-webhook-signature` |
 
 ## API
 
@@ -90,13 +93,14 @@ All `/api/clients` routes require an active session cookie (log in first).
 - `GET /api/clients/export?scope=archived` — download archived clients as CSV
 - `GET /api/clients/reminders` — list overdue follow-up email drafts
 - `POST /api/clients/reminders` — send reminders via SMTP when configured
+- `POST /api/clients/reminders/webhook` — push overdue digest to Slack/webhook
 - `GET /api/cron/reminders` — daily scheduled send (requires `Authorization: Bearer <CRON_SECRET>`)
 
 See `docs/api-contract.md` for request/response shapes.
 
 ## Scheduled reminders
 
-When SMTP and cron env vars are set, Vercel runs `GET /api/cron/reminders` every day at 09:00 UTC (`vercel.json`). The job sends reminders for overdue clients who have not already been reminded today.
+When SMTP and cron env vars are set, Vercel runs `GET /api/cron/reminders` every day at 09:00 UTC (`vercel.json`). The job sends reminders for overdue clients who have not already been reminded today. When `OVERDUE_WEBHOOK_URL` is set, the cron also posts a digest of all overdue clients to Slack (auto-detected) or a generic webhook — even if SMTP is not configured.
 
 Required for cron:
 
@@ -114,4 +118,4 @@ Required for cron:
 ## Next steps
 
 - Replace file store with Supabase or Postgres for multi-instance deploys
-- Slack/webhook notifications for overdue follow-ups
+- Quote status workflow integration with `web-service-quotes`

@@ -5,8 +5,10 @@ import type { Client } from "@/lib/types";
 import type { ReminderEmailDraft } from "@/lib/email-reminders";
 import {
   fetchReminderDrafts,
+  sendOverdueWebhookNotification,
   sendReminderEmails,
   type SendRemindersResult,
+  type SendWebhookNotificationResult,
 } from "@/lib/client-api";
 
 interface ReminderPanelProps {
@@ -22,10 +24,14 @@ export function ReminderPanel({
 }: ReminderPanelProps) {
   const [drafts, setDrafts] = useState<ReminderEmailDraft[]>([]);
   const [smtpConfigured, setSmtpConfigured] = useState(false);
+  const [webhookConfigured, setWebhookConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [notifyingWebhook, setNotifyingWebhook] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sendResult, setSendResult] = useState<SendRemindersResult | null>(null);
+  const [webhookResult, setWebhookResult] =
+    useState<SendWebhookNotificationResult | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,6 +52,7 @@ export function ReminderPanel({
         if (!cancelled) {
           setDrafts(response.drafts);
           setSmtpConfigured(response.smtpConfigured);
+          setWebhookConfigured(response.webhookConfigured);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -73,6 +80,7 @@ export function ReminderPanel({
     setSending(true);
     setError(null);
     setSendResult(null);
+    setWebhookResult(null);
 
     try {
       const result = await sendReminderEmails();
@@ -86,6 +94,25 @@ export function ReminderPanel({
       );
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleNotifyWebhook() {
+    setNotifyingWebhook(true);
+    setError(null);
+    setWebhookResult(null);
+
+    try {
+      const result = await sendOverdueWebhookNotification();
+      setWebhookResult(result);
+    } catch (notifyError) {
+      setError(
+        notifyError instanceof Error
+          ? notifyError.message
+          : "Could not send webhook notification",
+      );
+    } finally {
+      setNotifyingWebhook(false);
     }
   }
 
@@ -115,16 +142,28 @@ export function ReminderPanel({
             Draft reminder emails or send them when SMTP is configured.
           </p>
         </div>
-        {smtpConfigured ? (
-          <button
-            type="button"
-            disabled={disabled || sending || loading}
-            onClick={() => void handleSendAll()}
-            className="rounded-lg bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:opacity-60"
-          >
-            {sending ? "Sending…" : "Send all reminders"}
-          </button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {webhookConfigured ? (
+            <button
+              type="button"
+              disabled={disabled || notifyingWebhook || loading}
+              onClick={() => void handleNotifyWebhook()}
+              className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm font-semibold text-rose-800 transition hover:bg-rose-100 disabled:opacity-60"
+            >
+              {notifyingWebhook ? "Notifying…" : "Notify Slack/webhook"}
+            </button>
+          ) : null}
+          {smtpConfigured ? (
+            <button
+              type="button"
+              disabled={disabled || sending || loading}
+              onClick={() => void handleSendAll()}
+              className="rounded-lg bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:opacity-60"
+            >
+              {sending ? "Sending…" : "Send all reminders"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {error ? (
@@ -139,6 +178,13 @@ export function ReminderPanel({
             ? ` (${sendResult.failedCount} failed)`
             : ""}
           .
+        </p>
+      ) : null}
+
+      {webhookResult ? (
+        <p className="mt-3 text-sm text-rose-800">
+          Webhook notified for {webhookResult.overdueCount} overdue client
+          {webhookResult.overdueCount === 1 ? "" : "s"}.
         </p>
       ) : null}
 
@@ -190,10 +236,10 @@ export function ReminderPanel({
         </ul>
       )}
 
-      {!smtpConfigured && !loading ? (
+      {!smtpConfigured && !webhookConfigured && !loading ? (
         <p className="mt-3 text-xs text-rose-700">
           Server send is off. Use Open in email, or set SMTP env vars for bulk
-          send.
+          send. Set OVERDUE_WEBHOOK_URL for Slack/webhook alerts.
         </p>
       ) : null}
     </section>

@@ -68,12 +68,37 @@ describe("runScheduledReminders", () => {
 
     const result = await runScheduledReminders(store, {
       smtpConfigured: false,
+      webhookConfigured: false,
       sender,
       today,
     });
 
     expect(result.skipped).toBe("smtp_not_configured");
     expect(result.sentCount).toBe(0);
+  });
+
+  it("sends webhook digest when configured even without SMTP", async () => {
+    const store = new ClientStore();
+    store.clear();
+    store.create({
+      name: "Overdue Client",
+      company: "Late Co",
+      email: "late@example.com",
+      status: "active",
+      nextFollowUp: "2026-07-01",
+    });
+
+    const result = await runScheduledReminders(store, {
+      smtpConfigured: false,
+      webhookConfigured: true,
+      sender,
+      today,
+      notifyWebhook: async () => ({ delivered: true, statusCode: 200 }),
+    });
+
+    expect(result.skipped).toBe("smtp_not_configured");
+    expect(result.overdueCount).toBe(1);
+    expect(result.webhook?.delivered).toBe(true);
   });
 
   it("sends reminders and marks clients as reminded", async () => {

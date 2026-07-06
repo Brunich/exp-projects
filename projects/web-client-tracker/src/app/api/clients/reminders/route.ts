@@ -10,6 +10,9 @@ import {
   isSmtpConfigured,
   sendReminderEmails,
 } from "@/lib/server/email-sender";
+import {
+  isOverdueWebhookConfigured,
+} from "@/lib/server/webhook-notify";
 
 export async function GET() {
   const auth = await requireSession();
@@ -24,6 +27,7 @@ export async function GET() {
     data: {
       drafts,
       smtpConfigured: isSmtpConfigured(),
+      webhookConfigured: isOverdueWebhookConfigured(),
       overdueCount: overdue.length,
     },
   });

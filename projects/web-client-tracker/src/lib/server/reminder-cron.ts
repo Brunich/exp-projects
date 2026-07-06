@@ -10,6 +10,11 @@ import {
   sendReminderEmails,
   type SendReminderResult,
 } from "./email-sender";
+import {
+  isOverdueWebhookConfigured,
+  sendOverdueWebhook,
+  type OverdueWebhookResult,
+} from "./webhook-notify";
 
 export interface CronSenderConfig {
   email: string;
@@ -29,6 +34,8 @@ export interface ScheduledReminderRunResult {
   failedCount: number;
   targetedCount: number;
   results: SendReminderResult[];
+  overdueCount: number;
+  webhook?: OverdueWebhookResult;
 }
 
 export function getCronSenderConfig(): CronSenderConfig | null {
@@ -65,47 +72,64 @@ export async function runScheduledReminders(
   options: {
     sender?: ReminderSender | null;
     smtpConfigured?: boolean;
+    webhookConfigured?: boolean;
     today?: Date;
     send?: typeof sendReminderEmails;
+    notifyWebhook?: typeof sendOverdueWebhook;
   } = {},
 ): Promise<ScheduledReminderRunResult> {
   const today = options.today ?? new Date();
   const smtpConfigured = options.smtpConfigured ?? isSmtpConfigured();
+  const webhookConfigured =
+    options.webhookConfigured ?? isOverdueWebhookConfigured();
   const sender = options.sender ?? getCronSenderConfig();
+  const overdue = getClientsNeedingFollowUp(store.list(), today);
+
+  let webhook: OverdueWebhookResult | undefined;
+  if (webhookConfigured && overdue.length > 0) {
+    const notifyWebhook = options.notifyWebhook ?? sendOverdueWebhook;
+    webhook = await notifyWebhook(overdue, { today });
+  }
 
   if (!smtpConfigured) {
     return {
-      ok: true,
+      ok: webhook?.delivered ?? true,
       skipped: "smtp_not_configured",
       sentCount: 0,
       failedCount: 0,
       targetedCount: 0,
       results: [],
+      overdueCount: overdue.length,
+      webhook,
     };
   }
 
   if (!sender) {
     return {
-      ok: true,
+      ok: webhook?.delivered ?? true,
       skipped: "cron_sender_not_configured",
       sentCount: 0,
       failedCount: 0,
       targetedCount: 0,
       results: [],
+      overdueCount: overdue.length,
+      webhook,
     };
   }
 
   const targets = filterClientsForCronReminders(store.list(), today);
 
   if (targets.length === 0) {
-    const overdueCount = getClientsNeedingFollowUp(store.list(), today).length;
+    const overdueCount = overdue.length;
     return {
-      ok: true,
+      ok: webhook?.delivered ?? true,
       skipped: overdueCount > 0 ? "already_reminded_today" : "no_overdue_clients",
       sentCount: 0,
       failedCount: 0,
       targetedCount: 0,
       results: [],
+      overdueCount,
+      webhook,
     };
   }
 
@@ -124,10 +148,12 @@ export async function runScheduledReminders(
   const failedCount = results.length - sentCount;
 
   return {
-    ok: failedCount === 0,
+    ok: failedCount === 0 && (webhook?.delivered ?? true),
     sentCount,
     failedCount,
     targetedCount: targets.length,
     results,
+    overdueCount: overdue.length,
+    webhook,
   };
 }
