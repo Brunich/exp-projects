@@ -97,6 +97,7 @@ export function draftToSavedQuote(
     createdAt: options.createdAt ?? now,
     updatedAt: options.updatedAt ?? now,
     clientName: draft.clientName.trim(),
+    clientEmail: draft.clientEmail?.trim() || undefined,
     projectTitle: draft.projectTitle.trim(),
     validUntil: draft.validUntil,
     taxRatePercent: draft.taxRatePercent,
@@ -111,6 +112,7 @@ export function savedQuoteToDraft(quote: SavedQuote): QuoteDraft {
     issueDate: quote.issueDate,
     status: quote.status,
     clientName: quote.clientName,
+    clientEmail: quote.clientEmail,
     projectTitle: quote.projectTitle,
     validUntil: quote.validUntil,
     taxRatePercent: quote.taxRatePercent,
@@ -241,6 +243,8 @@ function isQuoteDraft(value: unknown): value is QuoteDraft {
     typeof record.issueDate === "string" &&
     isQuoteStatus(record.status) &&
     typeof record.clientName === "string" &&
+    (record.clientEmail === undefined ||
+      typeof record.clientEmail === "string") &&
     typeof record.projectTitle === "string" &&
     typeof record.validUntil === "string" &&
     typeof record.taxRatePercent === "number" &&
@@ -270,6 +274,8 @@ function normalizeLegacyDraft(record: Record<string, unknown>): QuoteDraft | nul
         : new Date().toISOString().slice(0, 10),
     status: isQuoteStatus(record.status) ? record.status : "draft",
     clientName: record.clientName,
+    clientEmail:
+      typeof record.clientEmail === "string" ? record.clientEmail : undefined,
     projectTitle: record.projectTitle,
     validUntil: record.validUntil,
     taxRatePercent: record.taxRatePercent,

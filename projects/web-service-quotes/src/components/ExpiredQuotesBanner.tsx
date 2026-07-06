@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
-import { isQuoteExpired } from "@/lib/quote";
+import { resolveBusinessName } from "@/lib/brand-settings";
+import { buildExpiredQuoteFollowUpBatch } from "@/lib/quote-follow-up-email";
 import {
   getSavedQuotesSnapshot,
   subscribeQuotesStorage,
 } from "@/lib/quote-storage";
+import { useBrandSettings } from "@/lib/use-brand-settings";
 
 export function ExpiredQuotesBanner() {
   const quotes = useSyncExternalStore(
@@ -14,22 +16,23 @@ export function ExpiredQuotesBanner() {
     getSavedQuotesSnapshot,
     () => [],
   );
-
-  const expiredSentQuotes = useMemo(
-    () =>
-      quotes.filter(
-        (quote) =>
-          quote.status === "sent" && isQuoteExpired(quote.validUntil),
-      ),
-    [quotes],
+  const { settings } = useBrandSettings();
+  const businessName = resolveBusinessName(
+    settings,
+    process.env.NEXT_PUBLIC_BUSINESS_NAME,
   );
 
-  if (expiredSentQuotes.length === 0) {
+  const followUpDrafts = useMemo(
+    () => buildExpiredQuoteFollowUpBatch(quotes, { name: businessName }),
+    [quotes, businessName],
+  );
+
+  if (followUpDrafts.length === 0) {
     return null;
   }
 
-  const count = expiredSentQuotes.length;
-  const first = expiredSentQuotes[0];
+  const count = followUpDrafts.length;
+  const first = followUpDrafts[0];
 
   return (
     <section
@@ -48,7 +51,7 @@ export function ExpiredQuotesBanner() {
           <>
             {" "}
             <Link
-              href={`/quotes/${first.id}`}
+              href={`/quotes/${first.quoteId}`}
               className="font-semibold underline underline-offset-2"
             >
               Review {first.projectTitle.trim() || "quote"}
@@ -56,6 +59,22 @@ export function ExpiredQuotesBanner() {
           </>
         ) : null}
       </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {followUpDrafts.slice(0, 3).map((draft) => (
+          <a
+            key={draft.quoteId}
+            href={draft.mailto}
+            className="inline-flex items-center rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100"
+          >
+            Email {draft.clientName.trim() || draft.projectTitle}
+          </a>
+        ))}
+        {count > 3 ? (
+          <span className="self-center text-xs text-rose-700">
+            +{count - 3} more in saved quotes
+          </span>
+        ) : null}
+      </div>
     </section>
   );
 }

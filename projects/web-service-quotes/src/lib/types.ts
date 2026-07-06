@@ -26,6 +26,7 @@ export interface QuoteDraft {
   issueDate: string;
   status: QuoteStatus;
   clientName: string;
+  clientEmail?: string;
   projectTitle: string;
   validUntil: string;
   taxRatePercent: number;
@@ -46,6 +47,7 @@ export interface SavedQuote {
   createdAt: string;
   updatedAt: string;
   clientName: string;
+  clientEmail?: string;
   projectTitle: string;
   validUntil: string;
   taxRatePercent: number;

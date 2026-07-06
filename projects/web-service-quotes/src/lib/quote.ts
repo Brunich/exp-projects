@@ -169,6 +169,7 @@ export function createEmptyQuote(
     issueDate: options.issueDate ?? new Date().toISOString().slice(0, 10),
     status: "draft",
     clientName: "",
+    clientEmail: "",
     projectTitle: "",
     validUntil: validUntil.toISOString().slice(0, 10),
     taxRatePercent: 8.25,

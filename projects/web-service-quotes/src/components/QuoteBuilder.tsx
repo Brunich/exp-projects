@@ -13,10 +13,12 @@ import {
 } from "@/lib/quote";
 import { useQuoteDraft } from "@/lib/use-quote-draft";
 import { resolveBusinessName } from "@/lib/brand-settings";
+import { getSavedQuoteById } from "@/lib/quote-storage";
 import { useBrandSettings } from "@/lib/use-brand-settings";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { BrandLogoUpload } from "./BrandLogoUpload";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
+import { QuoteFollowUpDraft } from "./QuoteFollowUpDraft";
 import { QuotePreview } from "./QuotePreview";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
@@ -33,6 +35,7 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
     quote,
     selectedTemplateId,
     savedQuoteId: currentSavedId,
+    savedQuotes,
     hydrated,
     saveMessage,
     updateDraft,
@@ -46,6 +49,23 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
     settings,
     process.env.NEXT_PUBLIC_BUSINESS_NAME,
   );
+  const currentSavedQuote = currentSavedId
+    ? getSavedQuoteById(savedQuotes, currentSavedId)
+    : undefined;
+  const followUpQuote =
+    currentSavedQuote && currentSavedId
+      ? {
+          ...currentSavedQuote,
+          quoteNumber: quote.quoteNumber,
+          status: quote.status,
+          clientName: quote.clientName,
+          clientEmail: quote.clientEmail,
+          projectTitle: quote.projectTitle,
+          validUntil: quote.validUntil,
+          taxRatePercent: quote.taxRatePercent,
+          lineItems: quote.lineItems,
+        }
+      : undefined;
 
   const totals = useMemo(
     () => calculateQuoteTotals(quote.lineItems, quote.taxRatePercent),
@@ -163,6 +183,13 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
 
       <BrandLogoUpload envBusinessName={process.env.NEXT_PUBLIC_BUSINESS_NAME} />
 
+      {followUpQuote ? (
+        <QuoteFollowUpDraft
+          quote={followUpQuote}
+          sender={{ name: businessName }}
+        />
+      ) : null}
+
       <ServiceTemplatePicker
         selectedId={selectedTemplateId}
         onSelect={applyTemplate}
@@ -233,6 +260,24 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
               placeholder="Jane Smith"
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
             />
+          </label>
+          <label className="block text-sm sm:col-span-2">
+            <span className="font-medium text-zinc-700">Client email</span>
+            <input
+              type="email"
+              value={quote.clientEmail ?? ""}
+              onChange={(event) =>
+                setQuote((current) => ({
+                  ...current,
+                  clientEmail: event.target.value,
+                }))
+              }
+              placeholder="jane@example.com"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Used for follow-up email drafts when a sent quote expires.
+            </p>
           </label>
           <label className="block text-sm">
             <span className="font-medium text-zinc-700">Project title</span>

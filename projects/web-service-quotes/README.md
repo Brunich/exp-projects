@@ -19,6 +19,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Explicit save to a local quote library with resume/edit from home
 - Delete saved quotes from the home list or while editing (with confirmation)
 - Quote expiration reminders flag sent/draft quotes past valid-until or expiring within 3 days
+- Follow-up email drafts with mailto links for expired sent quotes (home banner, quote editor, saved list)
 
 ## Quick start
 
@@ -86,3 +87,4 @@ Open **Templates** from the home page or quote builder to create job packages wi
 ## Next steps
 
 - Cloud sync API for multi-device access
+- Optional SMTP send for quote follow-up emails

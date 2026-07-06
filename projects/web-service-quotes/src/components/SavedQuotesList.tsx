@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { calculateQuoteTotals, formatCurrency, formatQuoteNumberLabel, isQuoteExpired } from "@/lib/quote";
+import { buildExpiredQuoteFollowUpEmail } from "@/lib/quote-follow-up-email";
+import { resolveBusinessName } from "@/lib/brand-settings";
 import {
   getSavedQuotesSnapshot,
   removeSavedQuoteFromStorage,
@@ -14,6 +16,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuoteExpirationBadge } from "./QuoteExpirationBadge";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
+import { useBrandSettings } from "@/lib/use-brand-settings";
 
 const STATUS_FILTERS: Array<QuoteStatus | "all" | "expired"> = [
   "all",
@@ -42,6 +45,11 @@ function formatUpdatedAt(iso: string): string {
 export function SavedQuotesList() {
   const [pendingDelete, setPendingDelete] = useState<SavedQuote | null>(null);
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all" | "expired">("all");
+  const { settings } = useBrandSettings();
+  const businessName = resolveBusinessName(
+    settings,
+    process.env.NEXT_PUBLIC_BUSINESS_NAME,
+  );
   const quotes = useSyncExternalStore(
     subscribeQuotesStorage,
     getSavedQuotesSnapshot,
@@ -134,6 +142,9 @@ export function SavedQuotesList() {
             quote.lineItems,
             quote.taxRatePercent,
           );
+          const followUpDraft = buildExpiredQuoteFollowUpEmail(quote, {
+            name: businessName,
+          });
 
           return (
             <li key={quote.id}>
@@ -167,6 +178,14 @@ export function SavedQuotesList() {
                     label="PDF"
                     className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   />
+                  {followUpDraft ? (
+                    <a
+                      href={followUpDraft.mailto}
+                      className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                    >
+                      Follow-up
+                    </a>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setPendingDelete(quote)}
