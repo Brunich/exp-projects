@@ -5,6 +5,7 @@ import type { RateLimitConfig } from "./lib/rate-limit.js";
 import { DEFAULT_RATE_LIMIT } from "./lib/rate-limit.js";
 import type { WebhookConfig } from "./lib/webhook.js";
 import type { WebhookQueueStore } from "./lib/webhook-queue.js";
+import { registerCronRoutes } from "./routes/cron.js";
 import { registerLeadRoutes } from "./routes/leads.js";
 import { registerWebhookRoutes } from "./routes/webhooks.js";
 
@@ -29,6 +30,7 @@ export async function buildApp(config: AppConfig) {
 
   await registerLeadRoutes(app, config);
   await registerWebhookRoutes(app, config);
+  await registerCronRoutes(app, config);
 
   return app;
 }

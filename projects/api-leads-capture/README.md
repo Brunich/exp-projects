@@ -21,6 +21,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `POST /webhooks/queue/:id/replay` — replay a dead-letter webhook delivery (API key required)
 - `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
 - `DELETE /webhooks/queue/dead` — purge dead-letter webhook deliveries by date/source filter (API key required)
+- `GET /cron/purge-dead-letters` — scheduled auto-purge of dead letters older than `DEAD_LETTER_RETENTION_DAYS` (CRON_SECRET bearer required)
 
 ## Quick start
 
@@ -48,6 +49,8 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `RATE_LIMIT_WINDOW_MS` | Rate limit window in ms (default `60000`) |
 | `HONEYPOT_FIELD` | Hidden form field name bots should leave empty (default `website`) |
 | `LEAD_DEDUP_MODE` | Duplicate email handling: `ignore` (default) or `upsert` |
+| `CRON_SECRET` | Bearer token for scheduled cron endpoints |
+| `DEAD_LETTER_RETENTION_DAYS` | Auto-purge dead letters older than N days (minimum `7`; unset disables cron purge) |
 
 ## API
 
@@ -252,6 +255,50 @@ Use `deadBefore` to drop old failures during housekeeping, for example dead lett
     "stats": { "pending": 0, "dead": 1, "total": 1 }
   }
 }
+```
+
+### `GET /cron/purge-dead-letters`
+
+Requires `Authorization: Bearer <CRON_SECRET>`. Intended for an external scheduler (GitHub Actions, Fly.io cron, system cron) — not the general API key.
+
+When `DEAD_LETTER_RETENTION_DAYS` is set (minimum `7`), permanently removes dead-letter items whose `updatedAt` is on or before the retention cutoff. Pending retries are never deleted. Skips safely when the webhook queue or retention env is not configured.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "ok": true,
+    "purgedCount": 2,
+    "retentionDays": 30,
+    "cutoff": "2026-06-06T08:00:00.000Z",
+    "items": [{ "...purged queue item..." }],
+    "stats": { "pending": 0, "dead": 1, "total": 1 }
+  }
+}
+```
+
+**Skipped run (`retention_not_configured`)**
+
+```json
+{
+  "data": {
+    "ok": true,
+    "skipped": "retention_not_configured",
+    "purgedCount": 0,
+    "retentionDays": null,
+    "cutoff": null,
+    "items": [],
+    "stats": { "pending": 0, "dead": 3, "total": 3 }
+  }
+}
+```
+
+Example daily schedule (03:00 UTC):
+
+```bash
+curl -X GET "https://your-api.example.com/cron/purge-dead-letters" \
+  -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 ## Scripts
