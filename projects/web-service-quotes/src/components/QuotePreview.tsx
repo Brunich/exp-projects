@@ -1,5 +1,6 @@
 import type { QuoteDraft } from "@/lib/types";
-import { calculateQuoteTotals, formatCurrency } from "@/lib/quote";
+import { calculateQuoteTotals, formatCurrency, formatQuoteStatusLabel } from "@/lib/quote";
+import { QuoteStatusBadge } from "./QuoteStatusBadge";
 
 interface QuotePreviewProps {
   quote: QuoteDraft;
@@ -30,6 +31,14 @@ export function QuotePreview({
               </span>
             ) : null}
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <QuoteStatusBadge status={quote.status} />
+            {quote.status !== "draft" ? (
+              <span className="text-xs text-zinc-500">
+                {formatQuoteStatusLabel(quote.status)} quote
+              </span>
+            ) : null}
+          </div>
           <h2 className="mt-1 text-2xl font-bold text-zinc-900">
             {quote.projectTitle || "Untitled project"}
           </h2>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { calculateQuoteTotals, formatCurrency, formatQuoteNumberLabel } from "@/lib/quote";
 import {
   getSavedQuotesSnapshot,
@@ -9,9 +9,17 @@ import {
   savedQuoteToDraft,
   subscribeQuotesStorage,
 } from "@/lib/quote-storage";
-import type { SavedQuote } from "@/lib/types";
+import type { QuoteStatus, SavedQuote } from "@/lib/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
+import { QuoteStatusBadge } from "./QuoteStatusBadge";
+
+const STATUS_FILTERS: Array<QuoteStatus | "all"> = [
+  "all",
+  "draft",
+  "sent",
+  "accepted",
+];
 
 function formatQuoteLabel(quote: SavedQuote): string {
   if (quote.projectTitle.trim()) return quote.projectTitle.trim();
@@ -31,6 +39,7 @@ function formatUpdatedAt(iso: string): string {
 
 export function SavedQuotesList() {
   const [pendingDelete, setPendingDelete] = useState<SavedQuote | null>(null);
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
   const quotes = useSyncExternalStore(
     subscribeQuotesStorage,
     getSavedQuotesSnapshot,
@@ -44,6 +53,25 @@ export function SavedQuotesList() {
     setPendingDelete(null);
   }
 
+  const sorted = useMemo(
+    () =>
+      [...quotes]
+        .filter((quote) => statusFilter === "all" || quote.status === statusFilter)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        ),
+    [quotes, statusFilter],
+  );
+
+  const statusCounts = useMemo(() => {
+    const counts = { draft: 0, sent: 0, accepted: 0 };
+    for (const quote of quotes) {
+      counts[quote.status] += 1;
+    }
+    return counts;
+  }, [quotes]);
+
   if (quotes.length === 0) {
     return (
       <section className="mt-16 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6">
@@ -56,17 +84,35 @@ export function SavedQuotesList() {
     );
   }
 
-  const sorted = [...quotes].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
-
   return (
     <section className="mt-16">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-zinc-900">Saved quotes</h2>
-        <p className="text-sm text-zinc-500">{sorted.length} saved</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-zinc-200 bg-white p-0.5 text-xs">
+            {STATUS_FILTERS.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setStatusFilter(filter)}
+                className={`rounded-md px-2.5 py-1 font-medium capitalize ${
+                  statusFilter === filter
+                    ? "bg-zinc-900 text-white"
+                    : "text-zinc-600 hover:bg-zinc-50"
+                }`}
+              >
+                {filter === "all" ? `All (${quotes.length})` : `${filter} (${statusCounts[filter]})`}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {sorted.length === 0 ? (
+        <p className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
+          No {statusFilter === "all" ? "" : `${statusFilter} `}quotes match this filter.
+        </p>
+      ) : (
       <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white shadow-sm">
         {sorted.map((quote) => {
           const totals = calculateQuoteTotals(
@@ -78,9 +124,12 @@ export function SavedQuotesList() {
             <li key={quote.id}>
               <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 hover:bg-zinc-50">
                 <Link href={`/quotes/${quote.id}`} className="min-w-0 flex-1">
-                  <p className="font-medium text-zinc-900">
-                    {formatQuoteLabel(quote)}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-zinc-900">
+                      {formatQuoteLabel(quote)}
+                    </p>
+                    <QuoteStatusBadge status={quote.status} />
+                  </div>
                   <p className="mt-1 text-sm text-zinc-500">
                     {formatQuoteNumberLabel(quote.quoteNumber)} · Issued{" "}
                     {formatUpdatedAt(quote.issueDate)} ·{" "}
@@ -112,6 +161,7 @@ export function SavedQuotesList() {
           );
         })}
       </ul>
+      )}
 
       {pendingDelete ? (
         <ConfirmDialog

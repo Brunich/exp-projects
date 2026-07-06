@@ -9,6 +9,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Custom template editor with local storage (create, edit, delete, duplicate your own job packages)
 - Search and category filter on the custom templates page
 - Quote builder with editable line items, tax rate, and validity date
+- Quote status tracking (draft, sent, accepted) with list filters
 - Auto-generated quote numbers (`Q-YYYY-NNNN`) with editable issue date
 - Live subtotal, tax, and total calculations
 - One-click PDF download for completed quotes (client, title, and line items required)

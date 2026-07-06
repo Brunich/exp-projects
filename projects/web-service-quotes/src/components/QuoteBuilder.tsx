@@ -7,6 +7,7 @@ import {
   calculateQuoteTotals,
   createLineItem,
   formatCurrency,
+  QUOTE_STATUSES,
 } from "@/lib/quote";
 import { useQuoteDraft } from "@/lib/use-quote-draft";
 import { resolveBusinessName } from "@/lib/brand-settings";
@@ -15,6 +16,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { BrandLogoUpload } from "./BrandLogoUpload";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuotePreview } from "./QuotePreview";
+import { QuoteStatusBadge } from "./QuoteStatusBadge";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
 
 interface QuoteBuilderProps {
@@ -113,14 +115,18 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 no-print">
         <div className="text-sm text-zinc-600">
           {currentSavedId ? (
-            <span>
+            <span className="inline-flex items-center gap-2">
               Editing {quote.quoteNumber || "saved quote"}{" "}
+              <QuoteStatusBadge status={quote.status} />
               <span className="font-mono text-xs text-zinc-500">
                 {currentSavedId.slice(0, 8)}
               </span>
             </span>
           ) : (
-            <span>Draft auto-saves as you type</span>
+            <span className="inline-flex items-center gap-2">
+              Draft auto-saves as you type
+              <QuoteStatusBadge status={quote.status} />
+            </span>
           )}
           {saveMessage ? (
             <span className="ml-2 font-medium text-emerald-700">{saveMessage}</span>
@@ -193,6 +199,25 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
             />
           </label>
           <label className="block text-sm">
+            <span className="font-medium text-zinc-700">Status</span>
+            <select
+              value={quote.status}
+              onChange={(event) =>
+                setQuote((current) => ({
+                  ...current,
+                  status: event.target.value as QuoteDraft["status"],
+                }))
+              }
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
+            >
+              {QUOTE_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm sm:col-span-2">
             <span className="font-medium text-zinc-700">Client name</span>
             <input
               type="text"

@@ -18,6 +18,7 @@ import type { QuoteDraft, SavedQuote } from "./types";
 const sampleDraft: QuoteDraft = {
   quoteNumber: "Q-2026-0001",
   issueDate: "2026-07-04",
+  status: "draft",
   clientName: "Jane Smith",
   projectTitle: "Spring cleanup",
   validUntil: "2026-07-18",
@@ -90,6 +91,13 @@ describe("parseSavedQuotes", () => {
     const parsed = parseSavedQuotes(JSON.stringify([legacy]), []);
     expect(parsed[0]?.quoteNumber).toBe("Q-2026-0001");
     expect(parsed[0]?.issueDate).toBe("2026-06-01");
+    expect(parsed[0]?.status).toBe("draft");
+  });
+
+  it("preserves status on saved quotes", () => {
+    const sent = { ...sampleSavedQuote, id: "quote-sent", status: "sent" as const };
+    const parsed = parseSavedQuotes(serializeSavedQuotes([sent]), []);
+    expect(parsed[0]?.status).toBe("sent");
   });
 });
 
@@ -114,6 +122,16 @@ describe("draftToSavedQuote", () => {
     expect(quote.projectTitle).toBe("Spring cleanup");
     expect(quote.templateId).toBe("cleaning");
     expect(quote.quoteNumber).toBe("Q-2026-0002");
+    expect(quote.status).toBe("draft");
+  });
+
+  it("keeps the selected status when saving", () => {
+    const quote = draftToSavedQuote(
+      { ...sampleDraft, status: "accepted" },
+      "quote-3",
+    );
+
+    expect(quote.status).toBe("accepted");
   });
 });
 

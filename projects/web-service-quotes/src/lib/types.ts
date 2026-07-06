@@ -12,6 +12,8 @@ export interface ServiceTemplate {
   lineItems: ServiceLineTemplate[];
 }
 
+export type QuoteStatus = "draft" | "sent" | "accepted";
+
 export interface QuoteLineItem {
   id: string;
   description: string;
@@ -22,6 +24,7 @@ export interface QuoteLineItem {
 export interface QuoteDraft {
   quoteNumber: string;
   issueDate: string;
+  status: QuoteStatus;
   clientName: string;
   projectTitle: string;
   validUntil: string;
@@ -39,6 +42,7 @@ export interface SavedQuote {
   id: string;
   quoteNumber: string;
   issueDate: string;
+  status: QuoteStatus;
   createdAt: string;
   updatedAt: string;
   clientName: string;

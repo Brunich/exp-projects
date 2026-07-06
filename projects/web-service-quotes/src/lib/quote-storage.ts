@@ -1,4 +1,4 @@
-import { createEmptyQuote, generateNextQuoteNumber } from "./quote";
+import { createEmptyQuote, generateNextQuoteNumber, isQuoteStatus } from "./quote";
 import type { QuoteDraft, QuoteDraftState, QuoteLineItem, SavedQuote } from "./types";
 
 export const QUOTES_DRAFT_KEY = "service-quotes:draft";
@@ -93,6 +93,7 @@ export function draftToSavedQuote(
     id,
     quoteNumber,
     issueDate: draft.issueDate,
+    status: draft.status,
     createdAt: options.createdAt ?? now,
     updatedAt: options.updatedAt ?? now,
     clientName: draft.clientName.trim(),
@@ -108,6 +109,7 @@ export function savedQuoteToDraft(quote: SavedQuote): QuoteDraft {
   return {
     quoteNumber: quote.quoteNumber,
     issueDate: quote.issueDate,
+    status: quote.status,
     clientName: quote.clientName,
     projectTitle: quote.projectTitle,
     validUntil: quote.validUntil,
@@ -237,6 +239,7 @@ function isQuoteDraft(value: unknown): value is QuoteDraft {
   return (
     typeof record.quoteNumber === "string" &&
     typeof record.issueDate === "string" &&
+    isQuoteStatus(record.status) &&
     typeof record.clientName === "string" &&
     typeof record.projectTitle === "string" &&
     typeof record.validUntil === "string" &&
@@ -265,6 +268,7 @@ function normalizeLegacyDraft(record: Record<string, unknown>): QuoteDraft | nul
       typeof record.issueDate === "string"
         ? record.issueDate
         : new Date().toISOString().slice(0, 10),
+    status: isQuoteStatus(record.status) ? record.status : "draft",
     clientName: record.clientName,
     projectTitle: record.projectTitle,
     validUntil: record.validUntil,
@@ -316,5 +320,6 @@ function normalizeSavedQuote(
       typeof record.issueDate === "string" && record.issueDate
         ? record.issueDate
         : fallbackIssueDate,
+    status: isQuoteStatus(record.status) ? record.status : "draft",
   };
 }

@@ -1,4 +1,32 @@
-import type { QuoteDraft, QuoteLineItem, QuoteTotals, SavedQuote } from "./types";
+import type { QuoteDraft, QuoteLineItem, QuoteStatus, QuoteTotals, SavedQuote } from "./types";
+
+export const QUOTE_STATUSES: QuoteStatus[] = ["draft", "sent", "accepted"];
+
+export function isQuoteStatus(value: unknown): value is QuoteStatus {
+  return typeof value === "string" && QUOTE_STATUSES.includes(value as QuoteStatus);
+}
+
+export function formatQuoteStatusLabel(status: QuoteStatus): string {
+  switch (status) {
+    case "draft":
+      return "Draft";
+    case "sent":
+      return "Sent";
+    case "accepted":
+      return "Accepted";
+  }
+}
+
+export function quoteStatusBadgeClass(status: QuoteStatus): string {
+  switch (status) {
+    case "draft":
+      return "bg-zinc-100 text-zinc-700 ring-zinc-200";
+    case "sent":
+      return "bg-sky-50 text-sky-800 ring-sky-200";
+    case "accepted":
+      return "bg-emerald-50 text-emerald-800 ring-emerald-200";
+  }
+}
 
 export function lineItemTotal(item: Pick<QuoteLineItem, "quantity" | "unitPrice">): number {
   return roundCurrency(item.quantity * item.unitPrice);
@@ -38,6 +66,7 @@ export function createEmptyQuote(
   return {
     quoteNumber: options.quoteNumber ?? "",
     issueDate: options.issueDate ?? new Date().toISOString().slice(0, 10),
+    status: "draft",
     clientName: "",
     projectTitle: "",
     validUntil: validUntil.toISOString().slice(0, 10),

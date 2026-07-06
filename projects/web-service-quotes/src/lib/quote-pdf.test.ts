@@ -10,6 +10,7 @@ import type { QuoteDraft } from "./types";
 const exportableQuote: QuoteDraft = {
   quoteNumber: "Q-2026-0042",
   issueDate: "2026-07-04",
+  status: "sent",
   clientName: "Jane Smith",
   projectTitle: "Spring Lawn Care",
   validUntil: "2026-07-18",

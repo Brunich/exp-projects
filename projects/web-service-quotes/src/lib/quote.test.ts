@@ -4,6 +4,7 @@ import {
   createEmptyQuote,
   createLineItem,
   formatCurrency,
+  formatQuoteStatusLabel,
   generateNextQuoteNumber,
   lineItemTotal,
 } from "./quote";
@@ -51,6 +52,15 @@ describe("createEmptyQuote", () => {
     const quote = createEmptyQuote();
     expect(quote.issueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(quote.quoteNumber).toBe("");
+    expect(quote.status).toBe("draft");
+  });
+});
+
+describe("quote status helpers", () => {
+  it("formats status labels", () => {
+    expect(formatQuoteStatusLabel("draft")).toBe("Draft");
+    expect(formatQuoteStatusLabel("sent")).toBe("Sent");
+    expect(formatQuoteStatusLabel("accepted")).toBe("Accepted");
   });
 });
 
@@ -61,6 +71,7 @@ describe("generateNextQuoteNumber", () => {
         id: "1",
         quoteNumber: "Q-2026-0003",
         issueDate: "2026-07-01",
+        status: "draft",
         createdAt: "2026-07-01T00:00:00.000Z",
         updatedAt: "2026-07-01T00:00:00.000Z",
         clientName: "A",
