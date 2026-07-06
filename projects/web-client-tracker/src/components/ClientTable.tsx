@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Client, ClientStatus } from "@/lib/types";
 import {
   daysUntilFollowUp,
-  filterClientsByStatus,
+  filterClients,
   isFollowUpOverdue,
   sortClientsByFollowUp,
 } from "@/lib/clients";
@@ -55,9 +55,15 @@ export function ClientTable({
   onDelete,
 }: ClientTableProps) {
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [overdueOnly, setOverdueOnly] = useState(false);
 
   const visibleClients = sortClientsByFollowUp(
-    filterClientsByStatus(clients, statusFilter),
+    filterClients(clients, {
+      query: searchQuery,
+      status: statusFilter,
+      overdueOnly: !showArchived && overdueOnly,
+    }),
   );
 
   const hasActions = Boolean(onEdit || onViewActivity || onArchive || onRestore || onDelete);
@@ -97,27 +103,54 @@ export function ClientTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-zinc-600">
-          {visibleClients.length} client{visibleClients.length === 1 ? "" : "s"}
-          {showArchived ? " (archived)" : ""}
-        </p>
-        <label className="flex items-center gap-2 text-sm text-zinc-700">
-          <span className="font-medium">Filter</span>
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as ClientStatus | "all")
-            }
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-zinc-700">
+            <span className="font-medium">Search</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Name or company"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            />
+          </label>
+          {!showArchived ? (
+            <button
+              type="button"
+              onClick={() => setOverdueOnly((current) => !current)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                overdueOnly
+                  ? "bg-rose-100 text-rose-800"
+                  : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+              }`}
+            >
+              Overdue only
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-1 sm:items-end">
+          <p className="text-sm text-zinc-600">
+            {visibleClients.length} client{visibleClients.length === 1 ? "" : "s"}
+            {showArchived ? " (archived)" : ""}
+          </p>
+          <label className="flex items-center gap-2 text-sm text-zinc-700">
+            <span className="font-medium">Status</span>
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as ClientStatus | "all")
+              }
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">

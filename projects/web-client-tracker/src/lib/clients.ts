@@ -87,6 +87,56 @@ export function filterClientsByStatus(
   return clients.filter((client) => client.status === status);
 }
 
+export function filterClientsByQuery(clients: Client[], query: string): Client[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return clients;
+
+  return clients.filter(
+    (client) =>
+      client.name.toLowerCase().includes(normalized) ||
+      client.company.toLowerCase().includes(normalized),
+  );
+}
+
+export function filterClientsOverdueOnly(
+  clients: Client[],
+  today: Date = new Date(),
+): Client[] {
+  return clients.filter(
+    (client) =>
+      client.status !== "closed" &&
+      isFollowUpOverdue(client.nextFollowUp, today),
+  );
+}
+
+export interface ClientListFilters {
+  query?: string;
+  status?: ClientStatus | "all";
+  overdueOnly?: boolean;
+  today?: Date;
+}
+
+export function filterClients(
+  clients: Client[],
+  filters: ClientListFilters,
+): Client[] {
+  let result = clients;
+
+  if (filters.query) {
+    result = filterClientsByQuery(result, filters.query);
+  }
+
+  if (filters.status && filters.status !== "all") {
+    result = filterClientsByStatus(result, filters.status);
+  }
+
+  if (filters.overdueOnly) {
+    result = filterClientsOverdueOnly(result, filters.today);
+  }
+
+  return result;
+}
+
 export function sortClientsByFollowUp(clients: Client[]): Client[] {
   return [...clients].sort((a, b) =>
     a.nextFollowUp.localeCompare(b.nextFollowUp),
