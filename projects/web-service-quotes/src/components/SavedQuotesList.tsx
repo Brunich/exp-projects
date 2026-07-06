@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { calculateQuoteTotals, formatCurrency, formatQuoteNumberLabel } from "@/lib/quote";
+import { calculateQuoteTotals, formatCurrency, formatQuoteNumberLabel, isQuoteExpired } from "@/lib/quote";
 import {
   getSavedQuotesSnapshot,
   removeSavedQuoteFromStorage,
@@ -12,13 +12,15 @@ import {
 import type { QuoteStatus, SavedQuote } from "@/lib/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
+import { QuoteExpirationBadge } from "./QuoteExpirationBadge";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
 
-const STATUS_FILTERS: Array<QuoteStatus | "all"> = [
+const STATUS_FILTERS: Array<QuoteStatus | "all" | "expired"> = [
   "all",
   "draft",
   "sent",
   "accepted",
+  "expired",
 ];
 
 function formatQuoteLabel(quote: SavedQuote): string {
@@ -39,7 +41,7 @@ function formatUpdatedAt(iso: string): string {
 
 export function SavedQuotesList() {
   const [pendingDelete, setPendingDelete] = useState<SavedQuote | null>(null);
-  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all" | "expired">("all");
   const quotes = useSyncExternalStore(
     subscribeQuotesStorage,
     getSavedQuotesSnapshot,
@@ -56,7 +58,13 @@ export function SavedQuotesList() {
   const sorted = useMemo(
     () =>
       [...quotes]
-        .filter((quote) => statusFilter === "all" || quote.status === statusFilter)
+        .filter((quote) => {
+          if (statusFilter === "all") return true;
+          if (statusFilter === "expired") {
+            return quote.status !== "accepted" && isQuoteExpired(quote.validUntil);
+          }
+          return quote.status === statusFilter;
+        })
         .sort(
           (a, b) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -65,9 +73,12 @@ export function SavedQuotesList() {
   );
 
   const statusCounts = useMemo(() => {
-    const counts = { draft: 0, sent: 0, accepted: 0 };
+    const counts = { draft: 0, sent: 0, accepted: 0, expired: 0 };
     for (const quote of quotes) {
       counts[quote.status] += 1;
+      if (quote.status !== "accepted" && isQuoteExpired(quote.validUntil)) {
+        counts.expired += 1;
+      }
     }
     return counts;
   }, [quotes]);
@@ -101,7 +112,11 @@ export function SavedQuotesList() {
                     : "text-zinc-600 hover:bg-zinc-50"
                 }`}
               >
-                {filter === "all" ? `All (${quotes.length})` : `${filter} (${statusCounts[filter]})`}
+                {filter === "all"
+                  ? `All (${quotes.length})`
+                  : filter === "expired"
+                    ? `Expired (${statusCounts.expired})`
+                    : `${filter} (${statusCounts[filter]})`}
               </button>
             ))}
           </div>
@@ -110,7 +125,7 @@ export function SavedQuotesList() {
 
       {sorted.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
-          No {statusFilter === "all" ? "" : `${statusFilter} `}quotes match this filter.
+          No {statusFilter === "all" ? "" : statusFilter === "expired" ? "expired " : `${statusFilter} `}quotes match this filter.
         </p>
       ) : (
       <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white shadow-sm">
@@ -129,10 +144,15 @@ export function SavedQuotesList() {
                       {formatQuoteLabel(quote)}
                     </p>
                     <QuoteStatusBadge status={quote.status} />
+                    <QuoteExpirationBadge
+                      status={quote.status}
+                      validUntil={quote.validUntil}
+                    />
                   </div>
                   <p className="mt-1 text-sm text-zinc-500">
                     {formatQuoteNumberLabel(quote.quoteNumber)} · Issued{" "}
-                    {formatUpdatedAt(quote.issueDate)} ·{" "}
+                    {formatUpdatedAt(quote.issueDate)} · Valid until{" "}
+                    {formatUpdatedAt(quote.validUntil)} ·{" "}
                     {quote.clientName.trim() || "No client"}
                   </p>
                 </Link>

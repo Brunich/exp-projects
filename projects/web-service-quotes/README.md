@@ -18,6 +18,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Draft auto-save in browser local storage while editing
 - Explicit save to a local quote library with resume/edit from home
 - Delete saved quotes from the home list or while editing (with confirmation)
+- Quote expiration reminders flag sent/draft quotes past valid-until or expiring within 3 days
 
 ## Quick start
 

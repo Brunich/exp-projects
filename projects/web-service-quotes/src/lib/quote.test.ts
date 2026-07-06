@@ -3,10 +3,15 @@ import {
   calculateQuoteTotals,
   createEmptyQuote,
   createLineItem,
+  daysUntilValidUntil,
   formatCurrency,
+  formatExpirationReminder,
   formatQuoteStatusLabel,
   generateNextQuoteNumber,
+  getQuoteExpirationState,
+  isQuoteExpired,
   lineItemTotal,
+  shouldShowExpirationReminder,
 } from "./quote";
 import type { SavedQuote } from "./types";
 
@@ -85,5 +90,31 @@ describe("generateNextQuoteNumber", () => {
     expect(
       generateNextQuoteNumber(existing, new Date("2026-07-05T00:00:00.000Z")),
     ).toBe("Q-2026-0004");
+  });
+});
+
+describe("quote expiration helpers", () => {
+  const now = new Date("2026-07-06T15:00:00.000Z");
+
+  it("flags quotes past valid-until as expired", () => {
+    expect(getQuoteExpirationState("2026-07-05", now)).toBe("expired");
+    expect(isQuoteExpired("2026-07-05", now)).toBe(true);
+    expect(daysUntilValidUntil("2026-07-05", now)).toBe(-1);
+  });
+
+  it("marks quotes expiring within three days as expiring soon", () => {
+    expect(getQuoteExpirationState("2026-07-08", now)).toBe("expiring_soon");
+    expect(getQuoteExpirationState("2026-07-10", now)).toBe("active");
+  });
+
+  it("formats expiration reminders for draft and sent quotes", () => {
+    expect(formatExpirationReminder("2026-07-04", now)).toBe(
+      "Expired 2 days ago",
+    );
+    expect(formatExpirationReminder("2026-07-07", now)).toBe("Expires tomorrow");
+    expect(shouldShowExpirationReminder("sent", "2026-07-04", now)).toBe(true);
+    expect(shouldShowExpirationReminder("accepted", "2026-07-04", now)).toBe(
+      false,
+    );
   });
 });

@@ -1,5 +1,13 @@
 import type { QuoteDraft } from "@/lib/types";
-import { calculateQuoteTotals, formatCurrency, formatQuoteStatusLabel } from "@/lib/quote";
+import {
+  calculateQuoteTotals,
+  formatCurrency,
+  formatExpirationReminder,
+  formatQuoteStatusLabel,
+  getQuoteExpirationState,
+  shouldShowExpirationReminder,
+} from "@/lib/quote";
+import { QuoteExpirationBadge } from "./QuoteExpirationBadge";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
 
 interface QuotePreviewProps {
@@ -15,6 +23,12 @@ export function QuotePreview({
 }: QuotePreviewProps) {
   const totals = calculateQuoteTotals(quote.lineItems, quote.taxRatePercent);
   const issuedOn = quote.issueDate || new Date().toISOString().slice(0, 10);
+  const expirationState = getQuoteExpirationState(quote.validUntil);
+  const expirationReminder = formatExpirationReminder(quote.validUntil);
+  const showExpirationWarning = shouldShowExpirationReminder(
+    quote.status,
+    quote.validUntil,
+  );
 
   return (
     <section
@@ -33,7 +47,11 @@ export function QuotePreview({
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <QuoteStatusBadge status={quote.status} />
-            {quote.status !== "draft" ? (
+            <QuoteExpirationBadge
+              status={quote.status}
+              validUntil={quote.validUntil}
+            />
+            {quote.status !== "draft" && !showExpirationWarning ? (
               <span className="text-xs text-zinc-500">
                 {formatQuoteStatusLabel(quote.status)} quote
               </span>
@@ -57,7 +75,20 @@ export function QuotePreview({
           ) : null}
           <p className="font-semibold text-zinc-900">{businessName}</p>
           <p className="mt-1">Issued {issuedOn}</p>
-          <p>Valid until {quote.validUntil}</p>
+          <p
+            className={
+              showExpirationWarning
+                ? expirationState === "expired"
+                  ? "font-medium text-rose-700"
+                  : "font-medium text-amber-700"
+                : undefined
+            }
+          >
+            Valid until {quote.validUntil}
+            {showExpirationWarning && expirationReminder
+              ? ` · ${expirationReminder}`
+              : ""}
+          </p>
         </div>
       </header>
 

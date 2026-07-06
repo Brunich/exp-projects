@@ -7,7 +7,9 @@ import {
   calculateQuoteTotals,
   createLineItem,
   formatCurrency,
+  formatExpirationReminder,
   QUOTE_STATUSES,
+  shouldShowExpirationReminder,
 } from "@/lib/quote";
 import { useQuoteDraft } from "@/lib/use-quote-draft";
 import { resolveBusinessName } from "@/lib/brand-settings";
@@ -260,6 +262,11 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
               }
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2"
             />
+            {shouldShowExpirationReminder(quote.status, quote.validUntil) ? (
+              <p className="mt-1 text-xs font-medium text-amber-800">
+                {formatExpirationReminder(quote.validUntil)}
+              </p>
+            ) : null}
           </label>
           <label className="block text-sm">
             <span className="font-medium text-zinc-700">Tax rate (%)</span>

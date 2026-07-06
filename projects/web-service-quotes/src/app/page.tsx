@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExpiredQuotesBanner } from "@/components/ExpiredQuotesBanner";
 import { SavedQuotesList } from "@/components/SavedQuotesList";
 
 export default function Home() {
@@ -76,6 +77,7 @@ export default function Home() {
           ))}
         </section>
 
+        <ExpiredQuotesBanner />
         <SavedQuotesList />
       </main>
     </div>

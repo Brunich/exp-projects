@@ -2,6 +2,107 @@ import type { QuoteDraft, QuoteLineItem, QuoteStatus, QuoteTotals, SavedQuote } 
 
 export const QUOTE_STATUSES: QuoteStatus[] = ["draft", "sent", "accepted"];
 
+export const EXPIRING_SOON_DAYS = 3;
+
+export type QuoteExpirationState = "active" | "expiring_soon" | "expired";
+
+export function parseQuoteDate(value: string): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function startOfUtcDay(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
+
+export function daysUntilValidUntil(
+  validUntil: string,
+  now = new Date(),
+): number | null {
+  const expiry = parseQuoteDate(validUntil);
+  if (!expiry) {
+    return null;
+  }
+
+  const diffMs = expiry.getTime() - startOfUtcDay(now).getTime();
+  return Math.round(diffMs / (24 * 60 * 60 * 1000));
+}
+
+export function getQuoteExpirationState(
+  validUntil: string,
+  now = new Date(),
+  expiringSoonDays = EXPIRING_SOON_DAYS,
+): QuoteExpirationState {
+  const days = daysUntilValidUntil(validUntil, now);
+  if (days === null) {
+    return "active";
+  }
+  if (days < 0) {
+    return "expired";
+  }
+  if (days <= expiringSoonDays) {
+    return "expiring_soon";
+  }
+  return "active";
+}
+
+export function isQuoteExpired(validUntil: string, now = new Date()): boolean {
+  return getQuoteExpirationState(validUntil, now) === "expired";
+}
+
+export function shouldShowExpirationReminder(
+  status: QuoteStatus,
+  validUntil: string,
+  now = new Date(),
+): boolean {
+  if (status === "accepted") {
+    return false;
+  }
+
+  return getQuoteExpirationState(validUntil, now) !== "active";
+}
+
+export function formatExpirationReminder(
+  validUntil: string,
+  now = new Date(),
+): string | null {
+  const state = getQuoteExpirationState(validUntil, now);
+  const days = daysUntilValidUntil(validUntil, now);
+  if (days === null || state === "active") {
+    return null;
+  }
+
+  if (state === "expired") {
+    const overdue = Math.abs(days);
+    return overdue === 1 ? "Expired yesterday" : `Expired ${overdue} days ago`;
+  }
+
+  if (days === 0) {
+    return "Expires today";
+  }
+  if (days === 1) {
+    return "Expires tomorrow";
+  }
+  return `Expires in ${days} days`;
+}
+
+export function quoteExpirationBadgeClass(state: QuoteExpirationState): string {
+  switch (state) {
+    case "expired":
+      return "bg-rose-50 text-rose-800 ring-rose-200";
+    case "expiring_soon":
+      return "bg-amber-50 text-amber-800 ring-amber-200";
+    case "active":
+      return "bg-zinc-100 text-zinc-600 ring-zinc-200";
+  }
+}
+
 export function isQuoteStatus(value: unknown): value is QuoteStatus {
   return typeof value === "string" && QUOTE_STATUSES.includes(value as QuoteStatus);
 }
