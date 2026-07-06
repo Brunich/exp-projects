@@ -94,6 +94,46 @@ describe("ClientStore", () => {
     expect(result.updated).toHaveLength(1);
     expect(store.getById(created.id)?.lastReminderAt).toBe("2026-07-05");
     expect(result.notFound).toEqual([]);
+
+    const activities = store.getById(created.id)?.activities ?? [];
+    expect(activities.some((entry) => entry.type === "reminder_sent")).toBe(true);
+  });
+
+  it("logs activity on create, update, archive, restore, and addNote", () => {
+    const store = createStore();
+    const created = store.create({
+      ...validInput,
+      notes: "Initial note",
+    });
+
+    let activities = store.getById(created.id)?.activities ?? [];
+    expect(activities.some((entry) => entry.type === "created")).toBe(true);
+    expect(activities.some((entry) => entry.type === "note")).toBe(true);
+
+    store.update(created.id, {
+      ...validInput,
+      status: "active",
+      notes: "Updated note",
+    });
+    activities = store.getById(created.id)?.activities ?? [];
+    expect(activities.some((entry) => entry.type === "status_changed")).toBe(true);
+
+    store.addNote(created.id, "Standalone timeline note");
+    activities = store.getById(created.id)?.activities ?? [];
+    expect(
+      activities.some(
+        (entry) =>
+          entry.type === "note" && entry.text === "Standalone timeline note",
+      ),
+    ).toBe(true);
+
+    store.archive(created.id, "2026-07-06");
+    activities = store.getById(created.id)?.activities ?? [];
+    expect(activities.some((entry) => entry.type === "archived")).toBe(true);
+
+    store.restore(created.id);
+    activities = store.getById(created.id)?.activities ?? [];
+    expect(activities.some((entry) => entry.type === "restored")).toBe(true);
   });
 
   it("writes valid JSON to disk", () => {

@@ -120,6 +120,52 @@ Permanently removes a client (typically from the archived list).
 
 **Response `200`**: `{ "data": { "id": "uuid" } }`
 
+### `GET /clients/:id/activity`
+
+Returns the activity timeline for a client (notes, reminders, status changes). Newest entries first.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "clientId": "uuid",
+    "timeline": [
+      {
+        "id": "uuid",
+        "type": "note",
+        "text": "Call summary — waiting on contract",
+        "createdAt": "2026-07-06T14:30:00.000Z"
+      },
+      {
+        "id": "uuid",
+        "type": "reminder_sent",
+        "text": "Follow-up reminder email sent",
+        "createdAt": "2026-07-05T12:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+Activity types: `note`, `reminder_sent`, `status_changed`, `follow_up_changed`, `created`, `archived`, `restored`.
+
+Legacy clients with only `lastReminderAt` (no stored reminder activities) include a synthetic `reminder_sent` entry in the timeline.
+
+### `POST /clients/:id/activity`
+
+Adds a standalone note to the client activity timeline.
+
+**Request body**
+
+```json
+{
+  "text": "string (required, max 2000 chars)"
+}
+```
+
+**Response `201`**: same shape as `GET /clients/:id/activity` with the updated timeline.
+
 ### `GET /clients/export?scope=archived`
 
 Downloads archived clients as a CSV file.

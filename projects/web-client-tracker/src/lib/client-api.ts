@@ -1,4 +1,4 @@
-import type { Client } from "./types";
+import type { Client, ClientActivity } from "./types";
 import type { ClientFormInput } from "./client-validation";
 
 export class ClientApiError extends Error {
@@ -160,4 +160,30 @@ export async function sendOverdueWebhookNotification(): Promise<SendWebhookNotif
     method: "POST",
   });
   return parseResponse<SendWebhookNotificationResult>(response);
+}
+
+export interface ClientActivityResponse {
+  clientId: string;
+  timeline: ClientActivity[];
+}
+
+export async function fetchClientActivity(
+  clientId: string,
+): Promise<ClientActivityResponse> {
+  const response = await fetch(`/api/clients/${clientId}/activity`, {
+    cache: "no-store",
+  });
+  return parseResponse<ClientActivityResponse>(response);
+}
+
+export async function addClientActivityNote(
+  clientId: string,
+  text: string,
+): Promise<ClientActivityResponse> {
+  const response = await fetch(`/api/clients/${clientId}/activity`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  return parseResponse<ClientActivityResponse>(response);
 }

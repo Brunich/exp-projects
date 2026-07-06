@@ -5,6 +5,26 @@ export type ClientStatus =
   | "paused"
   | "closed";
 
+export type ActivityType =
+  | "note"
+  | "reminder_sent"
+  | "status_changed"
+  | "follow_up_changed"
+  | "created"
+  | "archived"
+  | "restored";
+
+export interface ClientActivity {
+  id: string;
+  type: ActivityType;
+  text?: string;
+  createdAt: string;
+  meta?: {
+    from?: string;
+    to?: string;
+  };
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -17,6 +37,8 @@ export interface Client {
   archivedAt?: string;
   /** ISO date when the last follow-up reminder email was sent */
   lastReminderAt?: string;
+  /** Chronological activity log (notes, reminders, status changes) */
+  activities?: ClientActivity[];
 }
 
 export interface SessionUser {

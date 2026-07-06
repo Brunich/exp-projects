@@ -27,6 +27,7 @@ interface ClientTableProps {
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
   onEdit?: (client: Client) => void;
+  onViewActivity?: (client: Client) => void;
   onArchive?: (client: Client) => void;
   onRestore?: (client: Client) => void;
   onDelete?: (client: Client) => void;
@@ -48,6 +49,7 @@ export function ClientTable({
   selectedIds = [],
   onSelectionChange,
   onEdit,
+  onViewActivity,
   onArchive,
   onRestore,
   onDelete,
@@ -58,7 +60,7 @@ export function ClientTable({
     filterClientsByStatus(clients, statusFilter),
   );
 
-  const hasActions = Boolean(onEdit || onArchive || onRestore || onDelete);
+  const hasActions = Boolean(onEdit || onViewActivity || onArchive || onRestore || onDelete);
   const showSelection = selectable && Boolean(onSelectionChange);
   const visibleIds = visibleClients.map((client) => client.id);
   const selectedVisibleCount = visibleIds.filter((id) =>
@@ -244,6 +246,16 @@ export function ClientTable({
                             </>
                           ) : (
                             <>
+                              {onViewActivity ? (
+                                <button
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() => onViewActivity(client)}
+                                  className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-60"
+                                >
+                                  Timeline
+                                </button>
+                              ) : null}
                               {onEdit ? (
                                 <button
                                   type="button"

@@ -7,10 +7,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
+import { appendActivities, createActivity } from "../activity";
 import type { ClientFormInput } from "../client-validation";
 import { buildClientFromForm } from "../client-storage";
 import { SAMPLE_CLIENTS } from "../clients";
-import type { Client } from "../types";
+import type { Client, ClientActivity } from "../types";
 
 export interface ClientStoreOptions {
   filePath?: string;
@@ -55,7 +56,15 @@ export class ClientStore {
   }
 
   create(input: ClientFormInput): Client {
-    const client = buildClientFromForm(input, randomUUID());
+    const id = randomUUID();
+    let client = buildClientFromForm(input, id);
+    const entries: ClientActivity[] = [createActivity("created")];
+
+    if (input.notes?.trim()) {
+      entries.push(createActivity("note", { text: input.notes.trim() }));
+    }
+
+    client = appendActivities(client, entries);
     this.clients.push(client);
     this.persistToFile();
     return client;
@@ -65,10 +74,38 @@ export class ClientStore {
     const existing = this.getById(id);
     if (!existing) return null;
 
-    const updated = {
-      ...buildClientFromForm(input, id),
+    const base = buildClientFromForm(input, id);
+    const entries: ClientActivity[] = [];
+
+    if (existing.status !== base.status) {
+      entries.push(
+        createActivity("status_changed", {
+          meta: { from: existing.status, to: base.status },
+        }),
+      );
+    }
+
+    if (existing.nextFollowUp !== base.nextFollowUp) {
+      entries.push(
+        createActivity("follow_up_changed", {
+          meta: { from: existing.nextFollowUp, to: base.nextFollowUp },
+        }),
+      );
+    }
+
+    const previousNotes = existing.notes?.trim() ?? "";
+    const nextNotes = base.notes?.trim() ?? "";
+    if (previousNotes !== nextNotes && nextNotes) {
+      entries.push(createActivity("note", { text: nextNotes }));
+    }
+
+    let updated = {
+      ...base,
       archivedAt: existing.archivedAt,
+      lastReminderAt: existing.lastReminderAt,
+      activities: existing.activities,
     };
+    updated = appendActivities(updated, entries);
 
     this.clients = this.clients.map((client) =>
       client.id === id ? updated : client,
@@ -81,7 +118,10 @@ export class ClientStore {
     const existing = this.getById(id);
     if (!existing) return null;
 
-    const archived = { ...existing, archivedAt };
+    let archived = appendActivities(existing, [
+      createActivity("archived", { text: `Archived on ${archivedAt}` }),
+    ]);
+    archived = { ...archived, archivedAt };
     this.clients = this.clients.map((client) =>
       client.id === id ? archived : client,
     );
@@ -104,7 +144,10 @@ export class ClientStore {
         continue;
       }
 
-      updated.push({ ...existing, archivedAt });
+      const archived = appendActivities(existing, [
+        createActivity("archived", { text: `Archived on ${archivedAt}` }),
+      ]);
+      updated.push({ ...archived, archivedAt });
     }
 
     if (updated.length > 0) {
@@ -125,11 +168,13 @@ export class ClientStore {
     const { archivedAt, ...rest } = existing;
     void archivedAt;
 
+    const restored = appendActivities(rest, [createActivity("restored")]);
+
     this.clients = this.clients.map((client) =>
-      client.id === id ? rest : client,
+      client.id === id ? restored : client,
     );
     this.persistToFile();
-    return rest;
+    return restored;
   }
 
   restoreMany(ids: string[]): { updated: Client[]; notFound: string[] } {
@@ -146,7 +191,7 @@ export class ClientStore {
 
       const { archivedAt, ...rest } = existing;
       void archivedAt;
-      updated.push(rest);
+      updated.push(appendActivities(rest, [createActivity("restored")]));
     }
 
     if (updated.length > 0) {
@@ -158,6 +203,24 @@ export class ClientStore {
     }
 
     return { updated, notFound };
+  }
+
+  addNote(id: string, text: string): Client | null {
+    const existing = this.getById(id);
+    if (!existing) return null;
+
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+
+    const updated = appendActivities(existing, [
+      createActivity("note", { text: trimmed }),
+    ]);
+
+    this.clients = this.clients.map((client) =>
+      client.id === id ? updated : client,
+    );
+    this.persistToFile();
+    return updated;
   }
 
   delete(id: string): boolean {
@@ -183,7 +246,13 @@ export class ClientStore {
         continue;
       }
 
-      updated.push({ ...existing, lastReminderAt: sentAt });
+      const withReminder = appendActivities(existing, [
+        createActivity("reminder_sent", {
+          createdAt: `${sentAt}T12:00:00.000Z`,
+          text: "Follow-up reminder email sent",
+        }),
+      ]);
+      updated.push({ ...withReminder, lastReminderAt: sentAt });
     }
 
     if (updated.length > 0) {

@@ -18,6 +18,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - Active / archived tabs with confirmation dialogs
 - Bulk archive and restore with row selection
 - Export archived clients as CSV download
+- Per-client activity timeline (notes, reminder history, status changes)
 
 ## Quick start
 
@@ -88,6 +89,8 @@ All `/api/clients` routes require an active session cookie (log in first).
 - `GET /api/clients` — list clients
 - `POST /api/clients` — create client
 - `PATCH /api/clients/:id` — update, archive (`{ "action": "archive" }`), or restore (`{ "action": "restore" }`)
+- `GET /api/clients/:id/activity` — client activity timeline
+- `POST /api/clients/:id/activity` — add a timeline note (`{ "text": "..." }`)
 - `PATCH /api/clients/bulk` — archive or restore multiple clients (`{ "action": "archive" | "restore", "ids": ["uuid", ...] }`)
 - `DELETE /api/clients/:id` — permanent delete
 - `GET /api/clients/export?scope=archived` — download archived clients as CSV

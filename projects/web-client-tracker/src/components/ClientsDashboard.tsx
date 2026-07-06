@@ -9,6 +9,7 @@ import {
   getClientsNeedingFollowUp,
 } from "@/lib/clients";
 import { useClientStorage } from "@/lib/use-client-storage";
+import { ClientActivityPanel } from "./ClientActivityPanel";
 import { ClientForm } from "./ClientForm";
 import { ClientTable } from "./ClientTable";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -44,6 +45,7 @@ export function ClientsDashboard() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
   );
+  const [activityClient, setActivityClient] = useState<Client | null>(null);
 
   const activeClients = filterActiveClients(clients);
   const archivedClients = filterArchivedClients(clients);
@@ -240,6 +242,7 @@ export function ClientsDashboard() {
           selectable
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
+          onViewActivity={setActivityClient}
           onRestore={handleRestore}
           onDelete={handleDelete}
           disabled={mutating}
@@ -251,6 +254,7 @@ export function ClientsDashboard() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           onEdit={openEditForm}
+          onViewActivity={setActivityClient}
           onArchive={handleArchive}
           disabled={mutating}
         />
@@ -277,6 +281,15 @@ export function ClientsDashboard() {
             />
           </div>
         </div>
+      ) : null}
+
+      {activityClient ? (
+        <ClientActivityPanel
+          client={activityClient}
+          disabled={mutating}
+          onClose={() => setActivityClient(null)}
+          onActivityAdded={() => void refresh()}
+        />
       ) : null}
 
       {pendingAction?.type === "archive" ? (
