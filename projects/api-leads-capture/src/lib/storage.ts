@@ -14,6 +14,7 @@ import {
   filterLeadsForExport,
   type LeadListQuery,
 } from "./lead-filters.js";
+import { computeLeadStats, type LeadStatsQuery } from "./lead-stats.js";
 import type { LeadStore } from "./lead-store.js";
 import type { Lead, LeadInput } from "../types.js";
 
@@ -56,6 +57,10 @@ export class FileLeadStore implements LeadStore {
     query: Pick<LeadListQuery, "source" | "q" | "since">,
   ): Promise<Lead[]> {
     return filterLeadsForExport(this.leads, query);
+  }
+
+  async stats(query: LeadStatsQuery = {}) {
+    return computeLeadStats(this.leads, query);
   }
 
   async findByEmail(email: string): Promise<Lead | undefined> {

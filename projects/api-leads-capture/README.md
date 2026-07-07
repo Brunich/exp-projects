@@ -11,6 +11,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - Honeypot field check (`website` by default) silently rejects bots with a decoy 201
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
 - `GET /leads` — list stored leads with optional filters, pagination, and CSV export (API key required)
+- `GET /leads/stats` — lead summary totals by source and recent activity windows (API key required)
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
@@ -160,6 +161,42 @@ curl "http://localhost:3001/leads?format=csv&since=2026-07-01" \
   -H "x-api-key: dev-api-key-change-me" \
   -o leads.csv
 ```
+
+### `GET /leads/stats`
+
+Requires `x-api-key: <API_KEY>` or `Authorization: Bearer <API_KEY>`.
+
+Returns aggregate counts for dashboards without loading the full lead list.
+
+Optional query parameters:
+
+| Param   | Description                                              |
+| ------- | -------------------------------------------------------- |
+| `since` | Only include leads created on or after `YYYY-MM-DD`      |
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "total": 42,
+    "bySource": {
+      "landing": 20,
+      "referral": 10,
+      "ads": 8,
+      "other": 4
+    },
+    "recent": {
+      "today": 3,
+      "last7Days": 15,
+      "last30Days": 38
+    }
+  },
+  "meta": {}
+}
+```
+
+When `since` is set, `meta` includes `{ "since": "2026-07-01" }` and all counts apply to that filtered set.
 
 ### Webhook payload
 
@@ -364,6 +401,9 @@ curl http://localhost:3001/leads \
 curl "http://localhost:3001/leads?source=landing&q=pricing&limit=20" \
   -H "x-api-key: dev-api-key-change-me"
 
+curl http://localhost:3001/leads/stats \
+  -H "x-api-key: dev-api-key-change-me"
+
 curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAfter=2026-07-01T00:00:00.000Z" \
   -H "x-api-key: dev-api-key-change-me"
 
@@ -377,5 +417,4 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 
 ## Next steps
 
-- Lead stats summary endpoint (`GET /leads/stats`)
 - Webhook queue metrics endpoint for monitoring dashboards

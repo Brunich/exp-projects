@@ -7,6 +7,7 @@ import {
   type LeadListQuery,
   type LeadListResult,
 } from "./lead-filters.js";
+import { computeLeadStats, type LeadStatsQuery } from "./lead-stats.js";
 import type { LeadStore } from "./lead-store.js";
 import type { Lead, LeadInput, LeadSource } from "../types.js";
 
@@ -85,6 +86,11 @@ export class SupabaseLeadStore implements LeadStore {
   ): Promise<Lead[]> {
     const leads = await this.loadLeads();
     return filterLeadsForExport(leads, query);
+  }
+
+  async stats(query: LeadStatsQuery = {}) {
+    const leads = await this.loadLeads();
+    return computeLeadStats(leads, query);
   }
 
   async findByEmail(email: string): Promise<Lead | undefined> {

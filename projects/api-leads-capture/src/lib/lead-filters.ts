@@ -125,7 +125,7 @@ export function filterLeadsForExport(
   return applyLeadFilters(leads, query);
 }
 
-function applyLeadFilters(
+export function applyLeadFilters(
   leads: Lead[],
   query: Pick<LeadListQuery, "source" | "q" | "since">,
 ): Lead[] {

@@ -73,6 +73,62 @@ describe("lead routes", () => {
     });
   });
 
+  it("requires API key for GET /leads/stats", async () => {
+    const unauthorized = await app.inject({
+      method: "GET",
+      url: "/leads/stats",
+    });
+    expect(unauthorized.statusCode).toBe(401);
+  });
+
+  it("returns lead summary stats for authorized requests", async () => {
+    await store.clear();
+    await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Stats Landing",
+        email: "stats-landing@example.com",
+        source: "landing",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/leads",
+      payload: {
+        name: "Stats Referral",
+        email: "stats-referral@example.com",
+        source: "referral",
+      },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/leads/stats",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.total).toBe(2);
+    expect(body.data.bySource.landing).toBe(1);
+    expect(body.data.bySource.referral).toBe(1);
+    expect(body.data.recent.today).toBe(2);
+    expect(body.data.recent.last7Days).toBe(2);
+    expect(body.meta).toEqual({});
+  });
+
+  it("returns 400 for invalid stats query params", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/leads/stats?since=bad-date",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("filters leads by source and search query", async () => {
     await app.inject({
       method: "POST",

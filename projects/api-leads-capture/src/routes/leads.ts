@@ -7,6 +7,7 @@ import {
   isHoneypotTriggered,
 } from "../lib/honeypot.js";
 import { parseLeadListQuery } from "../lib/lead-filters.js";
+import { parseLeadStatsQuery } from "../lib/lead-stats.js";
 import { buildLeadsCsv, leadsCsvFilename } from "../lib/csv-export.js";
 import { validateLeadInput } from "../lib/validation.js";
 import { notifyLeadWebhook } from "../lib/webhook.js";
@@ -35,6 +36,33 @@ export async function registerLeadRoutes(
   app: FastifyInstance,
   config: AppConfig,
 ): Promise<void> {
+  app.get("/leads/stats", async (request, reply) => {
+    if (!isAuthorized(request, config.apiKey)) {
+      return reply.status(401).send(unauthorizedError());
+    }
+
+    const parsed = parseLeadStatsQuery(
+      request.query as Record<string, unknown>,
+    );
+
+    if (!parsed.ok) {
+      return reply.status(400).send({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+          details: parsed.details,
+        },
+      });
+    }
+
+    const stats = await config.store.stats(parsed.query);
+
+    return reply.send({
+      data: stats,
+      meta: parsed.query.since ? { since: parsed.query.since } : {},
+    });
+  });
+
   app.get("/leads", async (request, reply) => {
     if (!isAuthorized(request, config.apiKey)) {
       return reply.status(401).send(unauthorizedError());
