@@ -6,6 +6,7 @@ import {
   DEFAULT_CLIENT_LIST_FILTERS,
   resolveEscapeFilterAction,
   shouldHandleFocusSearch,
+  shouldHandleViewActivity,
 } from "@/lib/client-filter-shortcuts";
 import {
   daysUntilFollowUp,
@@ -72,6 +73,14 @@ export function ClientTable({
     setOverdueOnly(DEFAULT_CLIENT_LIST_FILTERS.overdueOnly);
   }
 
+  const visibleClients = sortClientsByFollowUp(
+    filterClients(clients, {
+      query: searchQuery,
+      status: statusFilter,
+      overdueOnly: !showArchived && overdueOnly,
+    }),
+  );
+
   useEffect(() => {
     if (shortcutsDisabled) return;
 
@@ -80,6 +89,16 @@ export function ClientTable({
         event.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
+        return;
+      }
+
+      if (
+        shouldHandleViewActivity(event, event.target) &&
+        onViewActivity &&
+        visibleClients.length > 0
+      ) {
+        event.preventDefault();
+        onViewActivity(visibleClients[0]);
         return;
       }
 
@@ -112,15 +131,14 @@ export function ClientTable({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcutsDisabled, searchQuery, statusFilter, overdueOnly]);
-
-  const visibleClients = sortClientsByFollowUp(
-    filterClients(clients, {
-      query: searchQuery,
-      status: statusFilter,
-      overdueOnly: !showArchived && overdueOnly,
-    }),
-  );
+  }, [
+    shortcutsDisabled,
+    searchQuery,
+    statusFilter,
+    overdueOnly,
+    visibleClients,
+    onViewActivity,
+  ]);
 
   const hasActions = Boolean(onEdit || onViewActivity || onArchive || onRestore || onDelete);
   const showSelection = selectable && Boolean(onSelectionChange);
@@ -173,6 +191,16 @@ export function ClientTable({
                   ⌘K
                 </kbd>{" "}
                 · Esc resets
+                {onViewActivity ? (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <kbd className="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px]">
+                      T
+                    </kbd>{" "}
+                    timeline
+                  </>
+                ) : null}
               </span>
             </span>
             <input

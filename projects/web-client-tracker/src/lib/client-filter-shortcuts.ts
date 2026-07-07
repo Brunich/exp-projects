@@ -94,6 +94,29 @@ export function shouldHandleAddClient(
   return !isEditableTarget(target);
 }
 
+export function matchesViewActivityShortcut(event: {
+  key: string;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+}): boolean {
+  if (event.metaKey || event.ctrlKey || event.altKey) return false;
+  return event.key === "t" || event.key === "T";
+}
+
+export function shouldHandleViewActivity(
+  event: {
+    key: string;
+    metaKey: boolean;
+    ctrlKey: boolean;
+    altKey: boolean;
+  },
+  target: EventTarget | null,
+): boolean {
+  if (!matchesViewActivityShortcut(event)) return false;
+  return !isEditableTarget(target);
+}
+
 export type EscapeFilterAction = "clear-search" | "reset-all" | "blur-search";
 
 export function resolveEscapeFilterAction(

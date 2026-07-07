@@ -6,9 +6,11 @@ import {
   matchesAddClientShortcut,
   matchesFocusSearchShortcut,
   matchesResetFiltersShortcut,
+  matchesViewActivityShortcut,
   resolveEscapeFilterAction,
   shouldHandleAddClient,
   shouldHandleFocusSearch,
+  shouldHandleViewActivity,
 } from "./client-filter-shortcuts";
 
 describe("hasActiveClientFilters", () => {
@@ -163,6 +165,58 @@ describe("shouldHandleAddClient", () => {
     expect(
       shouldHandleAddClient(
         { key: "n", metaKey: false, ctrlKey: false, altKey: false },
+        { tagName: "DIV" },
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("matchesViewActivityShortcut", () => {
+  it("matches t without modifiers", () => {
+    expect(
+      matchesViewActivityShortcut({
+        key: "t",
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+      }),
+    ).toBe(true);
+    expect(
+      matchesViewActivityShortcut({
+        key: "T",
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores modified keys", () => {
+    expect(
+      matchesViewActivityShortcut({
+        key: "t",
+        metaKey: true,
+        ctrlKey: false,
+        altKey: false,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("shouldHandleViewActivity", () => {
+  it("blocks t while typing in another field", () => {
+    expect(
+      shouldHandleViewActivity(
+        { key: "t", metaKey: false, ctrlKey: false, altKey: false },
+        { tagName: "INPUT" },
+      ),
+    ).toBe(false);
+  });
+
+  it("allows t from the page background", () => {
+    expect(
+      shouldHandleViewActivity(
+        { key: "t", metaKey: false, ctrlKey: false, altKey: false },
         { tagName: "DIV" },
       ),
     ).toBe(true);
