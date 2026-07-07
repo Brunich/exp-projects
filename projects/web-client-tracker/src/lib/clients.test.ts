@@ -6,6 +6,7 @@ import {
   filterClientsByQuery,
   filterClientsByStatus,
   filterClientsOverdueOnly,
+  filterClientsDueThisWeekOnly,
   getClientsDueThisWeek,
   getClientsNeedingFollowUp,
   getWeekBounds,
@@ -96,6 +97,17 @@ describe("filterClientsOverdueOnly", () => {
   });
 });
 
+describe("filterClientsDueThisWeekOnly", () => {
+  it("returns non-closed clients with follow-ups due this week", () => {
+    const today = new Date(2026, 6, 3);
+    const dueThisWeek = filterClientsDueThisWeekOnly(SAMPLE_CLIENTS, today);
+    expect(dueThisWeek.map((client) => client.name)).toEqual([
+      "Ana García",
+      "Marco Ruiz",
+    ]);
+  });
+});
+
 describe("filterClients", () => {
   it("combines search, status, and overdue filters", () => {
     const today = new Date(2026, 6, 3);
@@ -108,6 +120,19 @@ describe("filterClients", () => {
 
     expect(filtered).toHaveLength(1);
     expect(filtered[0].name).toBe("Marco Ruiz");
+  });
+
+  it("filters by due-this-week when enabled", () => {
+    const today = new Date(2026, 6, 3);
+    const filtered = filterClients(SAMPLE_CLIENTS, {
+      dueThisWeekOnly: true,
+      today,
+    });
+
+    expect(filtered.map((client) => client.name)).toEqual([
+      "Ana García",
+      "Marco Ruiz",
+    ]);
   });
 });
 

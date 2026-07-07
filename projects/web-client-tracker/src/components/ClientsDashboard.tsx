@@ -8,7 +8,11 @@ import {
   filterArchivedClients,
   getClientsNeedingFollowUp,
 } from "@/lib/clients";
-import { shouldHandleAddClient } from "@/lib/client-filter-shortcuts";
+import {
+  DEFAULT_CLIENT_LIST_FILTERS,
+  shouldHandleAddClient,
+  type ClientListFilterState,
+} from "@/lib/client-filter-shortcuts";
 import { useClientStorage } from "@/lib/use-client-storage";
 import { ClientActivityPanel } from "./ClientActivityPanel";
 import { ClientForm } from "./ClientForm";
@@ -48,6 +52,9 @@ export function ClientsDashboard() {
     null,
   );
   const [activityClient, setActivityClient] = useState<Client | null>(null);
+  const [listFilters, setListFilters] = useState<ClientListFilterState>(
+    DEFAULT_CLIENT_LIST_FILTERS,
+  );
 
   const shortcutsDisabled =
     formMode !== null ||
@@ -140,6 +147,23 @@ export function ClientsDashboard() {
   function switchTab(archived: boolean) {
     setShowArchived(archived);
     setSelectedIds([]);
+    setListFilters(DEFAULT_CLIENT_LIST_FILTERS);
+  }
+
+  function toggleOverdueFilter() {
+    setListFilters((current) => ({
+      ...current,
+      overdueOnly: !current.overdueOnly,
+      dueThisWeekOnly: false,
+    }));
+  }
+
+  function toggleDueThisWeekFilter() {
+    setListFilters((current) => ({
+      ...current,
+      dueThisWeekOnly: !current.dueThisWeekOnly,
+      overdueOnly: false,
+    }));
   }
 
   if (loading) {
@@ -181,7 +205,14 @@ export function ClientsDashboard() {
         </section>
       ) : null}
 
-      {!showArchived ? <ClientStatsPanel clients={clients} /> : null}
+      {!showArchived ? (
+        <ClientStatsPanel
+          clients={clients}
+          filters={listFilters}
+          onToggleOverdueFilter={toggleOverdueFilter}
+          onToggleDueThisWeekFilter={toggleDueThisWeekFilter}
+        />
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -280,6 +311,8 @@ export function ClientsDashboard() {
           clients={activeClients}
           selectable
           selectedIds={selectedIds}
+          filters={listFilters}
+          onFiltersChange={setListFilters}
           shortcutsDisabled={shortcutsDisabled}
           onSelectionChange={setSelectedIds}
           onEdit={openEditForm}

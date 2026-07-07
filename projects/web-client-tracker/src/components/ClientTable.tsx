@@ -7,6 +7,7 @@ import {
   resolveEscapeFilterAction,
   shouldHandleFocusSearch,
   shouldHandleViewActivity,
+  type ClientListFilterState,
 } from "@/lib/client-filter-shortcuts";
 import {
   daysUntilFollowUp,
@@ -32,6 +33,8 @@ interface ClientTableProps {
   shortcutsDisabled?: boolean;
   selectable?: boolean;
   selectedIds?: string[];
+  filters?: ClientListFilterState;
+  onFiltersChange?: (filters: ClientListFilterState) => void;
   onSelectionChange?: (ids: string[]) => void;
   onEdit?: (client: Client) => void;
   onViewActivity?: (client: Client) => void;
@@ -55,6 +58,8 @@ export function ClientTable({
   shortcutsDisabled = false,
   selectable = false,
   selectedIds = [],
+  filters: controlledFilters,
+  onFiltersChange,
   onSelectionChange,
   onEdit,
   onViewActivity,
@@ -62,22 +67,46 @@ export function ClientTable({
   onRestore,
   onDelete,
 }: ClientTableProps) {
-  const [statusFilter, setStatusFilter] = useState<ClientStatus | "all">("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [overdueOnly, setOverdueOnly] = useState(false);
+  const [internalFilters, setInternalFilters] =
+    useState<ClientListFilterState>(DEFAULT_CLIENT_LIST_FILTERS);
+  const filters = controlledFilters ?? internalFilters;
+
+  function updateFilters(next: ClientListFilterState) {
+    if (onFiltersChange) {
+      onFiltersChange(next);
+      return;
+    }
+    setInternalFilters(next);
+  }
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   function resetFilters() {
-    setSearchQuery(DEFAULT_CLIENT_LIST_FILTERS.searchQuery);
-    setStatusFilter(DEFAULT_CLIENT_LIST_FILTERS.statusFilter);
-    setOverdueOnly(DEFAULT_CLIENT_LIST_FILTERS.overdueOnly);
+    updateFilters(DEFAULT_CLIENT_LIST_FILTERS);
+  }
+
+  function toggleOverdueOnly() {
+    updateFilters({
+      ...filters,
+      overdueOnly: !filters.overdueOnly,
+      dueThisWeekOnly: false,
+    });
+  }
+
+  function toggleDueThisWeekOnly() {
+    updateFilters({
+      ...filters,
+      dueThisWeekOnly: !filters.dueThisWeekOnly,
+      overdueOnly: false,
+    });
   }
 
   const visibleClients = sortClientsByFollowUp(
     filterClients(clients, {
-      query: searchQuery,
-      status: statusFilter,
-      overdueOnly: !showArchived && overdueOnly,
+      query: filters.searchQuery,
+      status: filters.statusFilter,
+      overdueOnly: !showArchived && filters.overdueOnly,
+      dueThisWeekOnly: !showArchived && filters.dueThisWeekOnly,
     }),
   );
 
@@ -106,17 +135,14 @@ export function ClientTable({
 
       const searchFocused =
         document.activeElement === searchInputRef.current;
-      const action = resolveEscapeFilterAction(
-        { searchQuery, statusFilter, overdueOnly },
-        searchFocused,
-      );
+      const action = resolveEscapeFilterAction(filters, searchFocused);
 
       if (!action) return;
 
       event.preventDefault();
 
       if (action === "clear-search") {
-        setSearchQuery("");
+        updateFilters({ ...filters, searchQuery: "" });
         return;
       }
 
@@ -133,11 +159,10 @@ export function ClientTable({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     shortcutsDisabled,
-    searchQuery,
-    statusFilter,
-    overdueOnly,
+    filters,
     visibleClients,
     onViewActivity,
+    onFiltersChange,
   ]);
 
   const hasActions = Boolean(onEdit || onViewActivity || onArchive || onRestore || onDelete);
@@ -206,25 +231,40 @@ export function ClientTable({
             <input
               ref={searchInputRef}
               type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              value={filters.searchQuery}
+              onChange={(event) =>
+                updateFilters({ ...filters, searchQuery: event.target.value })
+              }
               placeholder="Name or company"
               aria-keyshortcuts="/ Control+K Meta+K"
               className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
           </label>
           {!showArchived ? (
-            <button
-              type="button"
-              onClick={() => setOverdueOnly((current) => !current)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                overdueOnly
-                  ? "bg-rose-100 text-rose-800"
-                  : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
-              }`}
-            >
-              Overdue only
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={toggleOverdueOnly}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  filters.overdueOnly
+                    ? "bg-rose-100 text-rose-800"
+                    : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Overdue only
+              </button>
+              <button
+                type="button"
+                onClick={toggleDueThisWeekOnly}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  filters.dueThisWeekOnly
+                    ? "bg-amber-100 text-amber-900"
+                    : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Due this week
+              </button>
+            </div>
           ) : null}
         </div>
         <div className="flex flex-col gap-1 sm:items-end">
@@ -235,9 +275,12 @@ export function ClientTable({
           <label className="flex items-center gap-2 text-sm text-zinc-700">
             <span className="font-medium">Status</span>
             <select
-              value={statusFilter}
+              value={filters.statusFilter}
               onChange={(e) =>
-                setStatusFilter(e.target.value as ClientStatus | "all")
+                updateFilters({
+                  ...filters,
+                  statusFilter: e.target.value as ClientStatus | "all",
+                })
               }
               className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >

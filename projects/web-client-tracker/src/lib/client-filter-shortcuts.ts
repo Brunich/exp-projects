@@ -4,12 +4,14 @@ export type ClientListFilterState = {
   searchQuery: string;
   statusFilter: ClientStatus | "all";
   overdueOnly: boolean;
+  dueThisWeekOnly: boolean;
 };
 
 export const DEFAULT_CLIENT_LIST_FILTERS: ClientListFilterState = {
   searchQuery: "",
   statusFilter: "all",
   overdueOnly: false,
+  dueThisWeekOnly: false,
 };
 
 export function hasActiveClientFilters(
@@ -18,7 +20,8 @@ export function hasActiveClientFilters(
   return (
     filters.searchQuery.trim().length > 0 ||
     filters.statusFilter !== "all" ||
-    filters.overdueOnly
+    filters.overdueOnly ||
+    filters.dueThisWeekOnly
   );
 }
 

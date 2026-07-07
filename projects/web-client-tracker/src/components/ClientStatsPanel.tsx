@@ -2,6 +2,7 @@ import {
   computeClientDashboardStats,
   getPipelineStatuses,
 } from "@/lib/client-stats";
+import type { ClientListFilterState } from "@/lib/client-filter-shortcuts";
 import type { Client } from "@/lib/types";
 import { ClientStatusBadge } from "./ClientStatusBadge";
 
@@ -18,9 +19,17 @@ const STATUS_LABELS: Record<
 
 interface ClientStatsPanelProps {
   clients: Client[];
+  filters: ClientListFilterState;
+  onToggleOverdueFilter: () => void;
+  onToggleDueThisWeekFilter: () => void;
 }
 
-export function ClientStatsPanel({ clients }: ClientStatsPanelProps) {
+export function ClientStatsPanel({
+  clients,
+  filters,
+  onToggleOverdueFilter,
+  onToggleDueThisWeekFilter,
+}: ClientStatsPanelProps) {
   const stats = computeClientDashboardStats(clients);
 
   return (
@@ -35,8 +44,15 @@ export function ClientStatsPanel({ clients }: ClientStatsPanelProps) {
           </p>
         </article>
 
-        <article
-          className={`rounded-xl border p-4 shadow-sm ${
+        <button
+          type="button"
+          onClick={onToggleOverdueFilter}
+          aria-pressed={filters.overdueOnly}
+          className={`rounded-xl border p-4 text-left shadow-sm transition hover:brightness-[0.98] ${
+            filters.overdueOnly
+              ? "ring-2 ring-rose-400 ring-offset-1"
+              : ""
+          } ${
             stats.overdueCount > 0
               ? "border-rose-200 bg-rose-50"
               : "border-zinc-200 bg-white"
@@ -56,10 +72,20 @@ export function ClientStatsPanel({ clients }: ClientStatsPanelProps) {
           >
             {stats.overdueCount}
           </p>
-        </article>
+          <p className="mt-1 text-xs text-zinc-500">
+            {filters.overdueOnly ? "Filter active" : "Click to filter table"}
+          </p>
+        </button>
 
-        <article
-          className={`rounded-xl border p-4 shadow-sm ${
+        <button
+          type="button"
+          onClick={onToggleDueThisWeekFilter}
+          aria-pressed={filters.dueThisWeekOnly}
+          className={`rounded-xl border p-4 text-left shadow-sm transition hover:brightness-[0.98] ${
+            filters.dueThisWeekOnly
+              ? "ring-2 ring-amber-400 ring-offset-1"
+              : ""
+          } ${
             stats.dueThisWeekCount > 0
               ? "border-amber-200 bg-amber-50"
               : "border-zinc-200 bg-white"
@@ -79,7 +105,10 @@ export function ClientStatsPanel({ clients }: ClientStatsPanelProps) {
           >
             {stats.dueThisWeekCount}
           </p>
-        </article>
+          <p className="mt-1 text-xs text-zinc-500">
+            {filters.dueThisWeekOnly ? "Filter active" : "Click to filter table"}
+          </p>
+        </button>
       </div>
 
       <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">

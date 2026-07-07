@@ -109,10 +109,22 @@ export function filterClientsOverdueOnly(
   );
 }
 
+export function filterClientsDueThisWeekOnly(
+  clients: Client[],
+  today: Date = new Date(),
+): Client[] {
+  return clients.filter(
+    (client) =>
+      client.status !== "closed" &&
+      isFollowUpDueThisWeek(client.nextFollowUp, today),
+  );
+}
+
 export interface ClientListFilters {
   query?: string;
   status?: ClientStatus | "all";
   overdueOnly?: boolean;
+  dueThisWeekOnly?: boolean;
   today?: Date;
 }
 
@@ -132,6 +144,10 @@ export function filterClients(
 
   if (filters.overdueOnly) {
     result = filterClientsOverdueOnly(result, filters.today);
+  }
+
+  if (filters.dueThisWeekOnly) {
+    result = filterClientsDueThisWeekOnly(result, filters.today);
   }
 
   return result;

@@ -37,6 +37,12 @@ describe("hasActiveClientFilters", () => {
         overdueOnly: true,
       }),
     ).toBe(true);
+    expect(
+      hasActiveClientFilters({
+        ...DEFAULT_CLIENT_LIST_FILTERS,
+        dueThisWeekOnly: true,
+      }),
+    ).toBe(true);
   });
 });
 
@@ -231,6 +237,7 @@ describe("resolveEscapeFilterAction", () => {
           searchQuery: "ana",
           statusFilter: "lead",
           overdueOnly: true,
+          dueThisWeekOnly: false,
         },
         true,
       ),
@@ -244,6 +251,7 @@ describe("resolveEscapeFilterAction", () => {
           searchQuery: "",
           statusFilter: "active",
           overdueOnly: false,
+          dueThisWeekOnly: false,
         },
         false,
       ),
