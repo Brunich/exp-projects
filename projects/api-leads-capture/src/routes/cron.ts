@@ -22,7 +22,7 @@ export async function registerCronRoutes(
       return reply.status(401).send(unauthorizedError());
     }
 
-    const result = runScheduledDeadLetterPurge(config.webhookQueue);
+    const result = await runScheduledDeadLetterPurge(config.webhookQueue);
 
     return reply.send({ data: result });
   });

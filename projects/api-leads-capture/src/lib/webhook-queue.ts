@@ -66,6 +66,39 @@ export interface ProcessQueueResult {
   dead: number;
 }
 
+export interface WebhookQueueStore {
+  list(): Promise<WebhookQueueItem[]>;
+  stats(): Promise<WebhookQueueStats>;
+  listDeadLetters(filter?: DeadLetterFilter): Promise<WebhookQueueItem[]>;
+  enqueue(
+    lead: Lead,
+    config: WebhookConfig,
+    failure: WebhookResult,
+    now?: Date,
+  ): Promise<WebhookQueueItem>;
+  getDueItems(now?: Date): Promise<WebhookQueueItem[]>;
+  claimDueItems?(
+    now?: Date,
+    limit?: number,
+    claimMs?: number,
+  ): Promise<WebhookQueueItem[]>;
+  remove(id: string): Promise<boolean>;
+  getById(id: string): Promise<WebhookQueueItem | undefined>;
+  replayDeadLetter(id: string, now?: Date): Promise<WebhookQueueItem>;
+  replayAllDeadLetters(now?: Date): Promise<WebhookQueueItem[]>;
+  replayDeadLetters(
+    filter?: DeadLetterFilter,
+    now?: Date,
+  ): Promise<WebhookQueueItem[]>;
+  purgeDeadLetters(filter?: DeadLetterFilter): Promise<WebhookQueueItem[]>;
+  recordFailure(
+    id: string,
+    failure: WebhookResult,
+    now?: Date,
+  ): Promise<WebhookQueueItem>;
+  clear(): Promise<void>;
+}
+
 export const DEFAULT_RETRY_DELAYS_MS = [
   60_000,
   5 * 60_000,
@@ -73,7 +106,7 @@ export const DEFAULT_RETRY_DELAYS_MS = [
   60 * 60_000,
 ];
 
-export class WebhookQueueStore {
+export class FileWebhookQueueStore implements WebhookQueueStore {
   private items: WebhookQueueItem[] = [];
   private readonly filePath?: string;
   private readonly maxAttempts: number;
@@ -92,13 +125,13 @@ export class WebhookQueueStore {
     }
   }
 
-  list(): WebhookQueueItem[] {
+  async list(): Promise<WebhookQueueItem[]> {
     return [...this.items].sort((a, b) =>
       a.nextRetryAt.localeCompare(b.nextRetryAt),
     );
   }
 
-  stats(): WebhookQueueStats {
+  async stats(): Promise<WebhookQueueStats> {
     const pending = this.items.filter((item) => item.status === "pending").length;
     const dead = this.items.filter((item) => item.status === "dead").length;
 
@@ -109,18 +142,18 @@ export class WebhookQueueStore {
     };
   }
 
-  listDeadLetters(filter?: DeadLetterFilter): WebhookQueueItem[] {
+  async listDeadLetters(filter?: DeadLetterFilter): Promise<WebhookQueueItem[]> {
     return this.items.filter(
       (item) => item.status === "dead" && matchesQueueFilter(item, filter),
     );
   }
 
-  enqueue(
+  async enqueue(
     lead: Lead,
     config: WebhookConfig,
     failure: WebhookResult,
     now = new Date(),
-  ): WebhookQueueItem {
+  ): Promise<WebhookQueueItem> {
     const existing = this.items.find(
       (item) => item.leadId === lead.id && item.status === "pending",
     );
@@ -151,7 +184,7 @@ export class WebhookQueueStore {
     return item;
   }
 
-  getDueItems(now = new Date()): WebhookQueueItem[] {
+  async getDueItems(now = new Date()): Promise<WebhookQueueItem[]> {
     const nowIso = now.toISOString();
 
     return this.items.filter(
@@ -159,7 +192,11 @@ export class WebhookQueueStore {
     );
   }
 
-  remove(id: string): boolean {
+  async claimDueItems(now = new Date()): Promise<WebhookQueueItem[]> {
+    return this.getDueItems(now);
+  }
+
+  async remove(id: string): Promise<boolean> {
     const before = this.items.length;
     this.items = this.items.filter((item) => item.id !== id);
 
@@ -171,11 +208,11 @@ export class WebhookQueueStore {
     return true;
   }
 
-  getById(id: string): WebhookQueueItem | undefined {
+  async getById(id: string): Promise<WebhookQueueItem | undefined> {
     return this.items.find((item) => item.id === id);
   }
 
-  replayDeadLetter(id: string, now = new Date()): WebhookQueueItem {
+  async replayDeadLetter(id: string, now = new Date()): Promise<WebhookQueueItem> {
     const item = this.items.find((entry) => entry.id === id);
 
     if (!item) {
@@ -198,20 +235,26 @@ export class WebhookQueueStore {
     return item;
   }
 
-  replayAllDeadLetters(now = new Date()): WebhookQueueItem[] {
+  async replayAllDeadLetters(now = new Date()): Promise<WebhookQueueItem[]> {
     return this.replayDeadLetters(undefined, now);
   }
 
-  replayDeadLetters(
+  async replayDeadLetters(
     filter?: DeadLetterFilter,
     now = new Date(),
-  ): WebhookQueueItem[] {
-    const deadIds = this.listDeadLetters(filter).map((item) => item.id);
-    return deadIds.map((id) => this.replayDeadLetter(id, now));
+  ): Promise<WebhookQueueItem[]> {
+    const deadIds = (await this.listDeadLetters(filter)).map((item) => item.id);
+    const replayed: WebhookQueueItem[] = [];
+
+    for (const id of deadIds) {
+      replayed.push(await this.replayDeadLetter(id, now));
+    }
+
+    return replayed;
   }
 
-  purgeDeadLetters(filter?: DeadLetterFilter): WebhookQueueItem[] {
-    const toPurge = this.listDeadLetters(filter);
+  async purgeDeadLetters(filter?: DeadLetterFilter): Promise<WebhookQueueItem[]> {
+    const toPurge = await this.listDeadLetters(filter);
     const purgeIds = new Set(toPurge.map((item) => item.id));
 
     if (purgeIds.size === 0) {
@@ -223,11 +266,11 @@ export class WebhookQueueStore {
     return toPurge;
   }
 
-  recordFailure(
+  async recordFailure(
     id: string,
     failure: WebhookResult,
     now = new Date(),
-  ): WebhookQueueItem {
+  ): Promise<WebhookQueueItem> {
     const item = this.items.find((entry) => entry.id === id);
 
     if (!item) {
@@ -252,7 +295,7 @@ export class WebhookQueueStore {
     return item;
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     this.items = [];
     this.persistToFile();
   }
@@ -305,12 +348,18 @@ export class WebhookQueueStore {
   }
 }
 
+/** @deprecated Use FileWebhookQueueStore — kept for existing imports */
+export const WebhookQueueStore = FileWebhookQueueStore;
+
 export async function processWebhookQueue(
   store: WebhookQueueStore,
   fetchImpl: typeof fetch = fetch,
   now = new Date(),
 ): Promise<ProcessQueueResult> {
-  const dueItems = store.getDueItems(now);
+  const dueItems = store.claimDueItems
+    ? await store.claimDueItems(now)
+    : await store.getDueItems(now);
+
   const result: ProcessQueueResult = {
     processed: dueItems.length,
     delivered: 0,
@@ -326,12 +375,12 @@ export async function processWebhookQueue(
     );
 
     if (webhookResult.delivered) {
-      store.remove(item.id);
+      await store.remove(item.id);
       result.delivered += 1;
       continue;
     }
 
-    const updated = store.recordFailure(item.id, webhookResult, now);
+    const updated = await store.recordFailure(item.id, webhookResult, now);
 
     if (updated.status === "dead") {
       result.dead += 1;

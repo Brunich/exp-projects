@@ -25,7 +25,7 @@ export async function buildApp(config: AppConfig) {
   app.get("/health", async () => ({
     status: "ok",
     leadsStored: await config.store.count(),
-    webhookQueue: config.webhookQueue?.stats(),
+    webhookQueue: await config.webhookQueue?.stats(),
   }));
 
   await registerLeadRoutes(app, config);

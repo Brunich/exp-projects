@@ -2,11 +2,8 @@ import { buildApp, defaultAppConfig } from "./app.js";
 import { parseLeadDedupMode } from "./lib/lead-dedup.js";
 import { parseRateLimitConfig } from "./lib/rate-limit.js";
 import { createLeadStore } from "./lib/create-lead-store.js";
-import {
-  processWebhookQueue,
-  startWebhookWorker,
-  WebhookQueueStore,
-} from "./lib/webhook-queue.js";
+import { createWebhookQueueStore } from "./lib/create-webhook-queue-store.js";
+import { processWebhookQueue, startWebhookWorker } from "./lib/webhook-queue.js";
 
 const port = Number(process.env.PORT ?? 3001);
 const apiKey = process.env.API_KEY ?? "dev-api-key-change-me";
@@ -29,11 +26,15 @@ const store = createLeadStore({
   supabaseTable: process.env.SUPABASE_LEADS_TABLE,
 });
 const webhookQueue = webhookUrl
-  ? new WebhookQueueStore({
+  ? createWebhookQueueStore({
       filePath: webhookQueueFile,
       maxAttempts: Number.isFinite(webhookMaxAttempts)
         ? webhookMaxAttempts
         : 5,
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      supabaseTable: process.env.SUPABASE_WEBHOOK_QUEUE_TABLE,
+      claimSeconds: Number(process.env.WEBHOOK_CLAIM_SECONDS ?? 120) || 120,
     })
   : undefined;
 

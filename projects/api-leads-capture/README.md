@@ -54,6 +54,8 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `SUPABASE_URL` | Optional Supabase project URL — enables shared Postgres storage for multi-instance deploys |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required with `SUPABASE_URL`) |
 | `SUPABASE_LEADS_TABLE` | Postgres table name for leads (default `leads`) |
+| `SUPABASE_WEBHOOK_QUEUE_TABLE` | Postgres table for webhook retry queue (default `webhook_queue`) |
+| `WEBHOOK_CLAIM_SECONDS` | Worker claim lease in seconds for multi-instance retries (default `120`) |
 
 ## API
 
@@ -321,18 +323,22 @@ Ensure `DEAD_LETTER_RETENTION_DAYS` is set on the server (minimum `7`) or the cr
 
 ## Supabase storage (multi-instance)
 
-By default leads are stored in a local JSON file (`LEADS_FILE`). For production deploys with multiple instances (Fly.io, Railway, serverless), set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to use a shared Postgres table instead.
+By default leads are stored in a local JSON file (`LEADS_FILE`) and the webhook retry queue uses `WEBHOOK_QUEUE_FILE`. For production deploys with multiple instances (Fly.io, Railway, serverless), set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to use shared Postgres tables instead.
 
-1. Create a Supabase project and run the migration in `supabase/migrations/001_leads.sql` (SQL editor or `supabase db push`).
+1. Create a Supabase project and run the migrations in `supabase/migrations/` (SQL editor or `supabase db push`).
 2. Copy the project URL and **service role** key into `.env`.
-3. Restart the API — `createLeadStore()` picks Supabase automatically when both vars are set.
+3. Restart the API — `createLeadStore()` and `createWebhookQueueStore()` pick Supabase automatically when both vars are set.
 
-The table includes a generated `email_normalized` column for case-insensitive deduplication. File storage remains the default when Supabase env vars are unset, so local dev and single-node deploys work unchanged.
+The leads table includes a generated `email_normalized` column for case-insensitive deduplication. The webhook queue table includes a `claim_webhook_queue_items` RPC so retry workers on different instances do not double-deliver the same due item (`FOR UPDATE SKIP LOCKED` with a short processing lease).
+
+File storage remains the default when Supabase env vars are unset, so local dev and single-node deploys work unchanged.
 
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_LEADS_TABLE=leads
+SUPABASE_WEBHOOK_QUEUE_TABLE=webhook_queue
+WEBHOOK_CLAIM_SECONDS=120
 ```
 
 ## Scripts
@@ -371,5 +377,5 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 
 ## Next steps
 
-- Webhook queue sync to Supabase for multi-instance retry workers
 - Lead stats summary endpoint (`GET /leads/stats`)
+- Webhook queue metrics endpoint for monitoring dashboards

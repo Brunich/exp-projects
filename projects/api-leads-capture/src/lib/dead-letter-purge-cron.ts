@@ -41,13 +41,13 @@ export function getDeadLetterPurgeCutoff(
   return cutoff.toISOString();
 }
 
-export function runScheduledDeadLetterPurge(
+export async function runScheduledDeadLetterPurge(
   store: WebhookQueueStore | undefined,
   options: {
     now?: Date;
     retentionDays?: number | null;
   } = {},
-): DeadLetterPurgeRunResult {
+): Promise<DeadLetterPurgeRunResult> {
   const now = options.now ?? new Date();
   const retentionDays =
     options.retentionDays ?? parseDeadLetterRetentionDays();
@@ -72,12 +72,12 @@ export function runScheduledDeadLetterPurge(
       retentionDays: null,
       cutoff: null,
       items: [],
-      stats: store.stats(),
+      stats: await store.stats(),
     };
   }
 
   const cutoff = getDeadLetterPurgeCutoff(retentionDays, now);
-  const items = store.purgeDeadLetters({ deadBefore: cutoff });
+  const items = await store.purgeDeadLetters({ deadBefore: cutoff });
 
   if (items.length === 0) {
     return {
@@ -87,7 +87,7 @@ export function runScheduledDeadLetterPurge(
       retentionDays,
       cutoff,
       items: [],
-      stats: store.stats(),
+      stats: await store.stats(),
     };
   }
 
@@ -97,6 +97,6 @@ export function runScheduledDeadLetterPurge(
     retentionDays,
     cutoff,
     items,
-    stats: store.stats(),
+    stats: await store.stats(),
   };
 }

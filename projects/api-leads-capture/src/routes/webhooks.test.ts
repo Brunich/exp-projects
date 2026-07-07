@@ -2,17 +2,17 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp, defaultAppConfig } from "../app.js";
 import { LeadStore } from "../lib/storage.js";
-import { WebhookQueueStore } from "../lib/webhook-queue.js";
+import { FileWebhookQueueStore } from "../lib/webhook-queue.js";
 
 describe("webhook queue routes", () => {
   let app: FastifyInstance;
   const store = new LeadStore();
-  const webhookQueue = new WebhookQueueStore({ maxAttempts: 3 });
+  const webhookQueue = new FileWebhookQueueStore({ maxAttempts: 3 });
   const apiKey = "test-api-key";
 
   beforeAll(async () => {
     await store.clear();
-    webhookQueue.clear();
+    await webhookQueue.clear();
 
     app = await buildApp(
       defaultAppConfig({
@@ -57,7 +57,7 @@ describe("webhook queue routes", () => {
 
   it("replays dead-letter deliveries and processes them immediately", async () => {
     const now = new Date("2026-07-04T10:00:00.000Z");
-    const item = webhookQueue.enqueue(
+    const item = await webhookQueue.enqueue(
       {
         id: "33333333-3333-4333-8333-333333333333",
         name: "Dead Letter",
@@ -70,18 +70,18 @@ describe("webhook queue routes", () => {
       now,
     );
 
-    webhookQueue.recordFailure(
+    await webhookQueue.recordFailure(
       item.id,
       { delivered: false, statusCode: 503, error: "Webhook returned 503" },
       now,
     );
-    webhookQueue.recordFailure(
+    await webhookQueue.recordFailure(
       item.id,
       { delivered: false, statusCode: 503, error: "Webhook returned 503" },
       now,
     );
 
-    expect(webhookQueue.stats().dead).toBe(1);
+    expect((await webhookQueue.stats()).dead).toBe(1);
 
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(null, { status: 200 });
@@ -95,7 +95,7 @@ describe("webhook queue routes", () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().data.processResult.delivered).toBe(1);
-      expect(webhookQueue.stats().total).toBe(0);
+      expect((await webhookQueue.stats()).total).toBe(0);
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -103,7 +103,7 @@ describe("webhook queue routes", () => {
 
   it("rejects replay for pending queue items", async () => {
     const now = new Date("2026-07-04T10:00:00.000Z");
-    const item = webhookQueue.enqueue(
+    const item = await webhookQueue.enqueue(
       {
         id: "44444444-4444-4444-8444-444444444444",
         name: "Pending",
@@ -127,14 +127,14 @@ describe("webhook queue routes", () => {
   });
 
   it("replays all dead-letter deliveries in one request", async () => {
-    webhookQueue.clear();
+    await webhookQueue.clear();
     const now = new Date("2026-07-04T10:00:00.000Z");
 
     for (const [id, email] of [
       ["55555555-5555-4555-8555-555555555555", "dead1@example.com"],
       ["66666666-6666-4666-8666-666666666666", "dead2@example.com"],
     ] as const) {
-      const item = webhookQueue.enqueue(
+      const item = await webhookQueue.enqueue(
         {
           id,
           name: "Dead Letter",
@@ -147,19 +147,19 @@ describe("webhook queue routes", () => {
         now,
       );
 
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         now,
       );
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         now,
       );
     }
 
-    expect(webhookQueue.stats().dead).toBe(2);
+    expect((await webhookQueue.stats()).dead).toBe(2);
 
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(null, { status: 200 });
@@ -174,14 +174,14 @@ describe("webhook queue routes", () => {
       expect(response.statusCode).toBe(200);
       expect(response.json().data.replayedCount).toBe(2);
       expect(response.json().data.processResult.delivered).toBe(2);
-      expect(webhookQueue.stats().total).toBe(0);
+      expect((await webhookQueue.stats()).total).toBe(0);
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
 
   it("returns zero replays when the dead-letter queue is empty", async () => {
-    webhookQueue.clear();
+    await webhookQueue.clear();
 
     const response = await app.inject({
       method: "POST",
@@ -195,7 +195,7 @@ describe("webhook queue routes", () => {
   });
 
   it("replays only dead letters that match source and date filters", async () => {
-    webhookQueue.clear();
+    await webhookQueue.clear();
     const early = new Date("2026-07-04T10:00:00.000Z");
     const late = new Date("2026-07-04T12:00:00.000Z");
 
@@ -213,7 +213,7 @@ describe("webhook queue routes", () => {
         late,
       ],
     ] as const) {
-      const item = webhookQueue.enqueue(
+      const item = await webhookQueue.enqueue(
         {
           id,
           name: "Dead Letter",
@@ -226,19 +226,19 @@ describe("webhook queue routes", () => {
         when,
       );
 
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         when,
       );
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         when,
       );
     }
 
-    expect(webhookQueue.stats().dead).toBe(2);
+    expect((await webhookQueue.stats()).dead).toBe(2);
 
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(null, { status: 200 });
@@ -253,18 +253,18 @@ describe("webhook queue routes", () => {
       expect(response.statusCode).toBe(200);
       expect(response.json().data.replayedCount).toBe(1);
       expect(response.json().data.processResult.delivered).toBe(1);
-      expect(webhookQueue.stats()).toEqual({ pending: 0, dead: 1, total: 1 });
-      expect(webhookQueue.listDeadLetters()[0]?.lead.source).toBe("landing");
+      expect((await webhookQueue.stats())).toEqual({ pending: 0, dead: 1, total: 1 });
+      expect((await webhookQueue.listDeadLetters())[0]?.lead.source).toBe("landing");
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
 
   it("filters queue items on GET /webhooks/queue", async () => {
-    webhookQueue.clear();
+    await webhookQueue.clear();
     const now = new Date("2026-07-04T10:00:00.000Z");
 
-    webhookQueue.enqueue(
+    await webhookQueue.enqueue(
       {
         id: "99999999-9999-4999-8999-999999999999",
         name: "Pending",
@@ -289,10 +289,10 @@ describe("webhook queue routes", () => {
   });
 
   it("exports dead-letter queue items as CSV", async () => {
-    webhookQueue.clear();
+    await webhookQueue.clear();
     const now = new Date("2026-07-04T10:00:00.000Z");
 
-    const item = webhookQueue.enqueue(
+    const item = await webhookQueue.enqueue(
       {
         id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         name: "Dead Export",
@@ -307,12 +307,12 @@ describe("webhook queue routes", () => {
       now,
     );
 
-    webhookQueue.recordFailure(
+    await webhookQueue.recordFailure(
       item.id,
       { delivered: false, statusCode: 503, error: "Webhook returned 503" },
       now,
     );
-    webhookQueue.recordFailure(
+    await webhookQueue.recordFailure(
       item.id,
       { delivered: false, statusCode: 503, error: "Webhook returned 503" },
       now,
@@ -347,7 +347,7 @@ describe("webhook queue routes", () => {
   });
 
   it("purges dead letters older than a cutoff date", async () => {
-    webhookQueue.clear();
+    await webhookQueue.clear();
     const early = new Date("2026-07-04T10:00:00.000Z");
     const late = new Date("2026-07-04T12:00:00.000Z");
 
@@ -355,7 +355,7 @@ describe("webhook queue routes", () => {
       ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "old@example.com", early],
       ["cccccccc-cccc-4ccc-8ccc-cccccccccccc", "new@example.com", late],
     ] as const) {
-      const item = webhookQueue.enqueue(
+      const item = await webhookQueue.enqueue(
         {
           id,
           name: "Dead Letter",
@@ -368,19 +368,19 @@ describe("webhook queue routes", () => {
         when,
       );
 
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         when,
       );
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         when,
       );
     }
 
-    expect(webhookQueue.stats().dead).toBe(2);
+    expect((await webhookQueue.stats()).dead).toBe(2);
 
     const response = await app.inject({
       method: "DELETE",
@@ -391,7 +391,7 @@ describe("webhook queue routes", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().data.purgedCount).toBe(1);
     expect(response.json().data.items[0].lead.email).toBe("old@example.com");
-    expect(webhookQueue.stats()).toEqual({ pending: 0, dead: 1, total: 1 });
+    expect((await webhookQueue.stats())).toEqual({ pending: 0, dead: 1, total: 1 });
   });
 
   it("requires API key to purge dead letters", async () => {
@@ -407,11 +407,11 @@ describe("webhook queue routes", () => {
 describe("POST /leads webhook retry queue", () => {
   let app: FastifyInstance;
   const store = new LeadStore();
-  const webhookQueue = new WebhookQueueStore({ maxAttempts: 3 });
+  const webhookQueue = new FileWebhookQueueStore({ maxAttempts: 3 });
 
   beforeAll(async () => {
     await store.clear();
-    webhookQueue.clear();
+    await webhookQueue.clear();
 
     app = await buildApp(
       defaultAppConfig({
@@ -444,8 +444,8 @@ describe("POST /leads webhook retry queue", () => {
       });
 
       expect(response.statusCode).toBe(201);
-      expect(webhookQueue.stats().pending).toBe(1);
-      expect(webhookQueue.list()[0]?.lead.email).toBe("retry@example.com");
+      expect((await webhookQueue.stats()).pending).toBe(1);
+      expect((await webhookQueue.list())[0]?.lead.email).toBe("retry@example.com");
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -137,7 +137,7 @@ export async function registerLeadRoutes(
           );
 
           if (config.webhookQueue) {
-            const queued = config.webhookQueue.enqueue(
+            const queued = await config.webhookQueue.enqueue(
               lead,
               config.webhook,
               webhookResult,

@@ -2,17 +2,17 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp, defaultAppConfig } from "../app.js";
 import { LeadStore } from "../lib/storage.js";
-import { WebhookQueueStore } from "../lib/webhook-queue.js";
+import { FileWebhookQueueStore } from "../lib/webhook-queue.js";
 
 describe("cron routes", () => {
   let app: FastifyInstance;
   const store = new LeadStore();
-  const webhookQueue = new WebhookQueueStore({ maxAttempts: 5 });
+  const webhookQueue = new FileWebhookQueueStore({ maxAttempts: 5 });
   const cronSecret = "cron-test-secret";
 
   beforeAll(async () => {
     await store.clear();
-    webhookQueue.clear();
+    await webhookQueue.clear();
 
     app = await buildApp(
       defaultAppConfig({
@@ -26,10 +26,10 @@ describe("cron routes", () => {
     await app.ready();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     delete process.env.CRON_SECRET;
     delete process.env.DEAD_LETTER_RETENTION_DAYS;
-    webhookQueue.clear();
+    await webhookQueue.clear();
   });
 
   afterAll(async () => {
@@ -62,7 +62,7 @@ describe("cron routes", () => {
     process.env.CRON_SECRET = cronSecret;
     process.env.DEAD_LETTER_RETENTION_DAYS = "30";
 
-    const item = webhookQueue.enqueue(
+    const item = await webhookQueue.enqueue(
       {
         id: "22222222-2222-4222-8222-222222222222",
         name: "Old Dead Letter",
@@ -76,7 +76,7 @@ describe("cron routes", () => {
     );
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      webhookQueue.recordFailure(
+      await webhookQueue.recordFailure(
         item.id,
         { delivered: false, statusCode: 503, error: "Webhook returned 503" },
         new Date("2026-06-01T10:00:00.000Z"),

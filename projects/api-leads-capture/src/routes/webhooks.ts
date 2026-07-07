@@ -59,7 +59,7 @@ export async function registerWebhookRoutes(
     }
 
     const items = filterQueueItems(
-      config.webhookQueue.list(),
+      await config.webhookQueue.list(),
       parsedQuery.query.filter,
     );
 
@@ -77,7 +77,7 @@ export async function registerWebhookRoutes(
 
     return reply.send({
       data: {
-        stats: config.webhookQueue.stats(),
+        stats: await config.webhookQueue.stats(),
         filter: parsedQuery.query.filter,
         items,
       },
@@ -106,7 +106,9 @@ export async function registerWebhookRoutes(
       return reply.status(400).send(validationError(parsedFilter.details));
     }
 
-    const items = config.webhookQueue.replayDeadLetters(parsedFilter.filter);
+    const items = await config.webhookQueue.replayDeadLetters(
+      parsedFilter.filter,
+    );
     const processResult = await processWebhookQueue(config.webhookQueue);
 
     return reply.send({
@@ -136,7 +138,7 @@ export async function registerWebhookRoutes(
     const { id } = request.params as { id: string };
 
     try {
-      const item = config.webhookQueue.replayDeadLetter(id);
+      const item = await config.webhookQueue.replayDeadLetter(id);
       const processResult = await processWebhookQueue(config.webhookQueue);
 
       return reply.send({
@@ -193,14 +195,16 @@ export async function registerWebhookRoutes(
       return reply.status(400).send(validationError(parsedFilter.details));
     }
 
-    const purged = config.webhookQueue.purgeDeadLetters(parsedFilter.filter);
+    const purged = await config.webhookQueue.purgeDeadLetters(
+      parsedFilter.filter,
+    );
 
     return reply.send({
       data: {
         purgedCount: purged.length,
         filter: parsedFilter.filter,
         items: purged,
-        stats: config.webhookQueue.stats(),
+        stats: await config.webhookQueue.stats(),
       },
     });
   });
