@@ -1,5 +1,6 @@
 import {
   filterActiveClients,
+  getClientsDueThisWeek,
   getClientsNeedingFollowUp,
 } from "./clients";
 import type { Client, ClientStatus } from "./types";
@@ -15,6 +16,7 @@ const PIPELINE_STATUSES: ClientStatus[] = [
 export interface ClientDashboardStats {
   activeTotal: number;
   overdueCount: number;
+  dueThisWeekCount: number;
   byStatus: Record<ClientStatus, number>;
 }
 
@@ -42,6 +44,7 @@ export function computeClientDashboardStats(
   return {
     activeTotal: activeClients.length,
     overdueCount: getClientsNeedingFollowUp(clients, today).length,
+    dueThisWeekCount: getClientsDueThisWeek(clients, today).length,
     byStatus,
   };
 }

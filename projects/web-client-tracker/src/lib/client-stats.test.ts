@@ -25,6 +25,7 @@ describe("computeClientDashboardStats", () => {
 
     expect(stats.activeTotal).toBe(5);
     expect(stats.overdueCount).toBe(1);
+    expect(stats.dueThisWeekCount).toBe(2);
   });
 
   it("breaks down active clients by pipeline status", () => {
@@ -50,6 +51,7 @@ describe("computeClientDashboardStats", () => {
 
     expect(stats.activeTotal).toBe(4);
     expect(stats.overdueCount).toBe(0);
+    expect(stats.dueThisWeekCount).toBe(1);
     expect(stats.byStatus.negotiating).toBe(0);
   });
 });

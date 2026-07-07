@@ -6,8 +6,11 @@ import {
   filterClientsByQuery,
   filterClientsByStatus,
   filterClientsOverdueOnly,
+  getClientsDueThisWeek,
   getClientsNeedingFollowUp,
+  getWeekBounds,
   isArchived,
+  isFollowUpDueThisWeek,
   isFollowUpOverdue,
   SAMPLE_CLIENTS,
   sortClientsByFollowUp,
@@ -131,5 +134,54 @@ describe("getClientsNeedingFollowUp", () => {
         : client,
     );
     expect(getClientsNeedingFollowUp(withArchived, today)).toHaveLength(0);
+  });
+});
+
+describe("getWeekBounds", () => {
+  it("returns Monday through Sunday for a mid-week date", () => {
+    const today = new Date(2026, 6, 3);
+    const { start, end } = getWeekBounds(today);
+
+    expect(start.toISOString().slice(0, 10)).toBe("2026-06-29");
+    expect(end.toISOString().slice(0, 10)).toBe("2026-07-05");
+  });
+});
+
+describe("isFollowUpDueThisWeek", () => {
+  const today = new Date(2026, 6, 3);
+
+  it("returns true for follow-ups within the current calendar week", () => {
+    expect(isFollowUpDueThisWeek("2026-07-02", today)).toBe(true);
+    expect(isFollowUpDueThisWeek("2026-07-05", today)).toBe(true);
+  });
+
+  it("returns false for follow-ups outside the current week", () => {
+    expect(isFollowUpDueThisWeek("2026-06-28", today)).toBe(false);
+    expect(isFollowUpDueThisWeek("2026-07-08", today)).toBe(false);
+  });
+});
+
+describe("getClientsDueThisWeek", () => {
+  it("returns active non-closed clients due in the current week", () => {
+    const today = new Date(2026, 6, 3);
+    const due = getClientsDueThisWeek(SAMPLE_CLIENTS, today);
+
+    expect(due.map((client) => client.name)).toEqual([
+      "Ana García",
+      "Marco Ruiz",
+    ]);
+  });
+
+  it("excludes archived clients even when follow-up is this week", () => {
+    const today = new Date(2026, 6, 3);
+    const withArchived = SAMPLE_CLIENTS.map((client) =>
+      client.name === "Marco Ruiz"
+        ? { ...client, archivedAt: "2026-07-01" }
+        : client,
+    );
+
+    expect(getClientsDueThisWeek(withArchived, today).map((c) => c.name)).toEqual(
+      ["Ana García"],
+    );
   });
 });

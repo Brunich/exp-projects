@@ -6,7 +6,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 
 - Demo auth stub with cookie session
 - Protected `/clients` dashboard
-- Dashboard stats panel with active total, overdue follow-up count, and pipeline status breakdown
+- Dashboard stats panel with active total, overdue follow-up count, due-this-week count, and pipeline status breakdown
 - REST API (`/api/clients`) with JSON file persistence
 - Client table with status badges and follow-up urgency
 - Overdue follow-up alert banner

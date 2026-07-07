@@ -155,6 +155,37 @@ export function getClientsNeedingFollowUp(
   );
 }
 
+export function getWeekBounds(date: Date): { start: Date; end: Date } {
+  const day = date.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const start = startOfDay(new Date(date));
+  start.setDate(date.getDate() + diffToMonday);
+  const end = startOfDay(new Date(start));
+  end.setDate(start.getDate() + 6);
+  return { start, end };
+}
+
+export function isFollowUpDueThisWeek(
+  followUpDate: string,
+  today: Date = new Date(),
+): boolean {
+  const followUp = parseDate(followUpDate);
+  const { start, end } = getWeekBounds(today);
+  return followUp >= start && followUp <= end;
+}
+
+export function getClientsDueThisWeek(
+  clients: Client[],
+  today: Date = new Date(),
+): Client[] {
+  return clients.filter(
+    (client) =>
+      !isArchived(client) &&
+      client.status !== "closed" &&
+      isFollowUpDueThisWeek(client.nextFollowUp, today),
+  );
+}
+
 function parseDate(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day);
