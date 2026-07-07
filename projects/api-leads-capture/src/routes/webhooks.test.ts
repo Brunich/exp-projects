@@ -39,6 +39,40 @@ describe("webhook queue routes", () => {
     expect(unauthorized.statusCode).toBe(401);
   });
 
+  it("requires API key for GET /webhooks/queue/metrics", async () => {
+    const unauthorized = await app.inject({
+      method: "GET",
+      url: "/webhooks/queue/metrics",
+    });
+
+    expect(unauthorized.statusCode).toBe(401);
+  });
+
+  it("returns queue metrics for authorized requests", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/webhooks/queue/metrics",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.counts).toEqual({
+      pending: 0,
+      dead: 0,
+      total: 0,
+      dueNow: 0,
+    });
+    expect(body.data.bySource.landing).toEqual({ pending: 0, dead: 0 });
+    expect(body.data.attempts).toEqual({
+      pendingAvg: 0,
+      pendingMax: 0,
+      deadAvg: 0,
+    });
+    expect(body.data.oldestPendingSeconds).toBeNull();
+    expect(body.data.recentDead).toEqual({ last24Hours: 0, last7Days: 0 });
+  });
+
   it("returns queue stats and items for authorized requests", async () => {
     const response = await app.inject({
       method: "GET",

@@ -11,6 +11,7 @@ import {
   deadLettersCsvFilename,
 } from "../lib/csv-export.js";
 import { processWebhookQueue } from "../lib/webhook-queue.js";
+import { computeWebhookQueueMetrics } from "../lib/webhook-queue-metrics.js";
 import type { ApiErrorBody } from "../types.js";
 
 function unauthorizedError(): ApiErrorBody {
@@ -36,6 +37,27 @@ export async function registerWebhookRoutes(
   app: FastifyInstance,
   config: AppConfig,
 ): Promise<void> {
+  app.get("/webhooks/queue/metrics", async (request, reply) => {
+    if (!isAuthorized(request, config.apiKey)) {
+      return reply.status(401).send(unauthorizedError());
+    }
+
+    if (!config.webhookQueue) {
+      return reply.status(404).send({
+        error: {
+          code: "NOT_CONFIGURED",
+          message: "Webhook queue is not enabled",
+        },
+      });
+    }
+
+    const items = await config.webhookQueue.list();
+
+    return reply.send({
+      data: computeWebhookQueueMetrics(items),
+    });
+  });
+
   app.get("/webhooks/queue", async (request, reply) => {
     if (!isAuthorized(request, config.apiKey)) {
       return reply.status(401).send(unauthorizedError());

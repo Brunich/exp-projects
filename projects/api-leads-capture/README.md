@@ -18,6 +18,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - Failed webhook deliveries queued with exponential backoff retries
 - Background worker processes the retry queue on an interval
 - `GET /webhooks/queue` — inspect pending and dead webhook deliveries (API key required)
+- `GET /webhooks/queue/metrics` — lightweight queue metrics for monitoring dashboards (API key required)
 - `GET /webhooks/queue?format=csv` — export filtered queue items as CSV (API key required)
 - `POST /webhooks/queue/:id/replay` — replay a dead-letter webhook delivery (API key required)
 - `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
@@ -213,6 +214,43 @@ If `WEBHOOK_SECRET` is set, the request includes `x-webhook-signature` (HMAC-SHA
 
 When delivery fails, the lead is still stored and the webhook is queued for retry (1 min, 5 min, 15 min, 60 min backoff). After `WEBHOOK_MAX_ATTEMPTS` failures the item is marked dead.
 
+### `GET /webhooks/queue/metrics`
+
+Requires API key. Returns aggregated queue metrics without item payloads — suited for monitoring dashboards and health checks when `WEBHOOK_URL` is configured.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "counts": {
+      "pending": 2,
+      "dead": 1,
+      "total": 3,
+      "dueNow": 1
+    },
+    "bySource": {
+      "landing": { "pending": 1, "dead": 0 },
+      "referral": { "pending": 0, "dead": 1 },
+      "ads": { "pending": 1, "dead": 0 },
+      "other": { "pending": 0, "dead": 0 }
+    },
+    "attempts": {
+      "pendingAvg": 2.5,
+      "pendingMax": 3,
+      "deadAvg": 5
+    },
+    "oldestPendingSeconds": 3600,
+    "recentDead": {
+      "last24Hours": 1,
+      "last7Days": 1
+    }
+  }
+}
+```
+
+`dueNow` counts pending items ready for retry (`nextRetryAt` in the past). `oldestPendingSeconds` is the age of the longest-waiting pending item, or `null` when the queue has no pending work.
+
 ### `GET /webhooks/queue`
 
 Requires API key. Returns queue stats and pending/dead items when `WEBHOOK_URL` is configured.
@@ -404,6 +442,9 @@ curl "http://localhost:3001/leads?source=landing&q=pricing&limit=20" \
 curl http://localhost:3001/leads/stats \
   -H "x-api-key: dev-api-key-change-me"
 
+curl http://localhost:3001/webhooks/queue/metrics \
+  -H "x-api-key: dev-api-key-change-me"
+
 curl -X POST "http://localhost:3001/webhooks/queue/replay-dead?source=ads&deadAfter=2026-07-01T00:00:00.000Z" \
   -H "x-api-key: dev-api-key-change-me"
 
@@ -417,4 +458,4 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 
 ## Next steps
 
-- Webhook queue metrics endpoint for monitoring dashboards
+- Daily lead count buckets on `GET /leads/stats` for charting dashboards
