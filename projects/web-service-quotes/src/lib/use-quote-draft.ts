@@ -5,6 +5,7 @@ import type { QuoteDraft, QuoteDraftState, SavedQuote } from "./types";
 import { createEmptyQuote, extendQuoteValidityDate, generateNextQuoteNumber } from "./quote";
 import {
   draftToSavedQuote,
+  extendSavedQuoteValidity,
   getSavedQuoteById,
   loadDraftFromStorage,
   loadSavedQuotesFromStorage,
@@ -125,6 +126,7 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
       createdAt: existing?.createdAt,
       templateId: draftState.selectedTemplateId,
       existingQuotes: quotes,
+      revisionHistory: existing?.revisionHistory,
     });
 
     const nextQuotes = upsertSavedQuote(quotes, saved);
@@ -197,12 +199,11 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
         return false;
       }
 
-      updateDraft((current) => ({
-        ...current,
-        validUntil: nextValidUntil,
-      }));
-
       if (!draftState.savedQuoteId) {
+        updateDraft((current) => ({
+          ...current,
+          validUntil: nextValidUntil,
+        }));
         setSaveMessage(`Valid until ${nextValidUntil}`);
         if (saveMessageTimer.current) {
           clearTimeout(saveMessageTimer.current);
@@ -213,35 +214,28 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
 
       const storage = window.localStorage;
       const quotes = loadSavedQuotesFromStorage(storage);
-      const existing = getSavedQuoteById(quotes, draftState.savedQuoteId);
-      if (!existing) {
+      const result = extendSavedQuoteValidity(
+        quotes,
+        draftState.savedQuoteId,
+        extensionDays,
+      );
+      if (!result) {
         return false;
       }
 
-      const saved = draftToSavedQuote(
-        { ...draftState.draft, validUntil: nextValidUntil },
-        existing.id,
-        {
-          createdAt: existing.createdAt,
-          templateId: draftState.selectedTemplateId,
-          existingQuotes: quotes,
-        },
-      );
-
-      const nextQuotes = upsertSavedQuote(quotes, saved);
-      saveSavedQuotesToStorage(storage, nextQuotes);
+      saveSavedQuotesToStorage(storage, result.quotes);
 
       const nextState: QuoteDraftState = {
         ...draftState,
-        draft: savedQuoteToDraft(saved),
-        savedQuoteId: existing.id,
+        draft: savedQuoteToDraft(result.quote),
+        savedQuoteId: result.quote.id,
       };
       saveDraftToStorage(storage, nextState);
       notifyQuotesStorageUpdated();
 
       setStore((current) => ({
         draftState: nextState,
-        savedQuotes: nextQuotes,
+        savedQuotes: result.quotes,
         hydrated: current.hydrated,
       }));
       setSaveMessage(`Extended to ${nextValidUntil}`);

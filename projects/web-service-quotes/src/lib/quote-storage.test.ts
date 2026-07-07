@@ -237,7 +237,16 @@ describe("extendSavedQuoteValidity", () => {
     const result = extendSavedQuoteValidity([expired], "quote-1", 14, now);
 
     expect(result?.quote.validUntil).toBe("2026-07-20");
-    expect(result?.quotes[0].updatedAt).toBe(now.toISOString());
+    expect(result?.quote.updatedAt).toBe(now.toISOString());
+    expect(result?.quote.revisionHistory).toHaveLength(1);
+    expect(result?.quote.revisionHistory?.[0]).toMatchObject({
+      type: "validity_extended",
+      meta: {
+        previousValidUntil: "2026-07-04",
+        newValidUntil: "2026-07-20",
+        extensionDays: 14,
+      },
+    });
   });
 
   it("returns null when the quote id is missing", () => {

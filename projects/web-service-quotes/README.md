@@ -22,6 +22,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Follow-up email drafts with mailto links for expired sent quotes (home banner, quote editor, saved list)
 - One-click validity extension (+7 / +14 / +30 days) on expired sent quotes from follow-up panels
 - Revised quote email drafts after extending validity (mailto link to notify the client)
+- Revision history timeline on saved quotes when validity is extended
 
 ## Quick start
 

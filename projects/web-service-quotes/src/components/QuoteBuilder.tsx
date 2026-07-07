@@ -20,6 +20,7 @@ import { BrandLogoUpload } from "./BrandLogoUpload";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuoteFollowUpDraft } from "./QuoteFollowUpDraft";
 import { QuotePreview } from "./QuotePreview";
+import { QuoteRevisionHistory } from "./QuoteRevisionHistory";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
 import { ServiceTemplatePicker } from "./ServiceTemplatePicker";
 
@@ -190,6 +191,10 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
           sender={{ name: businessName }}
           onExtendValidity={extendValidity}
         />
+      ) : null}
+
+      {currentSavedQuote ? (
+        <QuoteRevisionHistory quote={currentSavedQuote} />
       ) : null}
 
       <ServiceTemplatePicker

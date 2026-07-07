@@ -39,6 +39,20 @@ export interface QuoteTotals {
   total: number;
 }
 
+export type QuoteRevisionType = "validity_extended";
+
+export interface QuoteRevisionNote {
+  id: string;
+  type: QuoteRevisionType;
+  createdAt: string;
+  note?: string;
+  meta?: {
+    previousValidUntil?: string;
+    newValidUntil?: string;
+    extensionDays?: number;
+  };
+}
+
 export interface SavedQuote {
   id: string;
   quoteNumber: string;
@@ -53,6 +67,7 @@ export interface SavedQuote {
   taxRatePercent: number;
   lineItems: QuoteLineItem[];
   templateId?: string;
+  revisionHistory?: QuoteRevisionNote[];
 }
 
 export interface QuoteDraftState {

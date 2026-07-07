@@ -4,6 +4,11 @@ import {
   generateNextQuoteNumber,
   isQuoteStatus,
 } from "./quote";
+import {
+  appendRevisionNotes,
+  createValidityExtensionRevision,
+  normalizeRevisionHistory,
+} from "./quote-revisions";
 import type { QuoteDraft, QuoteDraftState, QuoteLineItem, SavedQuote } from "./types";
 
 export const QUOTES_DRAFT_KEY = "service-quotes:draft";
@@ -87,6 +92,7 @@ export function draftToSavedQuote(
     updatedAt?: string;
     templateId?: string;
     existingQuotes?: SavedQuote[];
+    revisionHistory?: SavedQuote["revisionHistory"];
   } = {},
 ): SavedQuote {
   const now = new Date().toISOString();
@@ -108,6 +114,7 @@ export function draftToSavedQuote(
     taxRatePercent: draft.taxRatePercent,
     lineItems: draft.lineItems,
     templateId: options.templateId,
+    revisionHistory: options.revisionHistory,
   };
 }
 
@@ -194,11 +201,21 @@ export function extendSavedQuoteValidity(
     return null;
   }
 
-  const quote: SavedQuote = {
-    ...current,
-    validUntil,
-    updatedAt: now.toISOString(),
-  };
+  const revision = createValidityExtensionRevision({
+    previousValidUntil: current.validUntil,
+    newValidUntil: validUntil,
+    extensionDays,
+    createdAt: now.toISOString(),
+  });
+
+  const quote: SavedQuote = appendRevisionNotes(
+    {
+      ...current,
+      validUntil,
+      updatedAt: now.toISOString(),
+    },
+    [revision],
+  );
   const nextQuotes = [...quotes];
   nextQuotes[index] = quote;
 
@@ -396,5 +413,9 @@ function normalizeSavedQuote(
         ? record.issueDate
         : fallbackIssueDate,
     status: isQuoteStatus(record.status) ? record.status : "draft",
+    revisionHistory: (() => {
+      const history = normalizeRevisionHistory(record.revisionHistory);
+      return history.length > 0 ? history : undefined;
+    })(),
   };
 }
