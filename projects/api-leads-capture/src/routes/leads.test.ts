@@ -117,6 +117,12 @@ describe("lead routes", () => {
     expect(body.data.recent.last7Days).toBe(2);
     expect(body.data.dailyBuckets).toHaveLength(14);
     expect(body.data.dailyBuckets.at(-1)?.count).toBe(2);
+    expect(body.data.dailyBuckets.at(-1)?.bySource).toEqual({
+      landing: 1,
+      referral: 1,
+      ads: 0,
+      other: 0,
+    });
     expect(body.meta).toEqual({});
   });
 

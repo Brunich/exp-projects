@@ -20,6 +20,7 @@ export interface LeadStatsBySource {
 export interface LeadDailyBucket {
   date: string;
   count: number;
+  bySource: LeadStatsBySource;
 }
 
 export interface LeadStats {
@@ -127,10 +128,11 @@ export function buildDailyBuckets(
   now: Date = new Date(),
 ): LeadDailyBucket[] {
   const start = startOfDay(addDays(now, -(bucketDays - 1)));
-  const counts = new Map<string, number>();
+  const buckets = new Map<string, LeadDailyBucket>();
 
   for (let dayIndex = 0; dayIndex < bucketDays; dayIndex += 1) {
-    counts.set(formatDateKey(addDays(start, dayIndex)), 0);
+    const date = formatDateKey(addDays(start, dayIndex));
+    buckets.set(date, { date, count: 0, bySource: emptyBySource() });
   }
 
   for (const lead of leads) {
@@ -140,12 +142,16 @@ export function buildDailyBuckets(
     }
 
     const key = formatDateKey(startOfDay(createdAt));
-    if (counts.has(key)) {
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+    const bucket = buckets.get(key);
+    if (!bucket) {
+      continue;
     }
+
+    bucket.count += 1;
+    bucket.bySource[lead.source] += 1;
   }
 
-  return [...counts.entries()].map(([date, count]) => ({ date, count }));
+  return [...buckets.values()];
 }
 
 function emptyBySource(): LeadStatsBySource {

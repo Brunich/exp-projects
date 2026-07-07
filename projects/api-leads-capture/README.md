@@ -194,16 +194,16 @@ Optional query parameters:
       "last30Days": 38
     },
     "dailyBuckets": [
-      { "date": "2026-06-24", "count": 1 },
-      { "date": "2026-06-25", "count": 0 },
-      { "date": "2026-07-07", "count": 3 }
+      { "date": "2026-06-24", "count": 1, "bySource": { "landing": 1, "referral": 0, "ads": 0, "other": 0 } },
+      { "date": "2026-06-25", "count": 0, "bySource": { "landing": 0, "referral": 0, "ads": 0, "other": 0 } },
+      { "date": "2026-07-07", "count": 3, "bySource": { "landing": 2, "referral": 1, "ads": 0, "other": 0 } }
     ]
   },
   "meta": {}
 }
 ```
 
-`dailyBuckets` is oldest-first with zero-filled days so charting libraries can plot a continuous series. The window ends today and spans `bucketDays` days (default 14).
+`dailyBuckets` is oldest-first with zero-filled days so charting libraries can plot a continuous series. Each bucket includes `count` (total leads that day) and `bySource` (per-source counts for stacked area/bar charts). The window ends today and spans `bucketDays` days (default 14).
 
 When `since` is set, `meta` includes `{ "since": "2026-07-01" }` and all counts apply to that filtered set. When `bucketDays` is set explicitly, `meta` includes `{ "bucketDays": 30 }`.
 
@@ -466,4 +466,5 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 
 ## Next steps
 
-- Source breakdown on daily lead buckets for stacked charts
+- Sample Grafana/Metabase dashboard JSON using `/leads/stats` stacked chart data
+- Weekly email digest endpoint for lead volume trends
