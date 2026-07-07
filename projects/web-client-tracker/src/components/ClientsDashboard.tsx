@@ -12,6 +12,7 @@ import { shouldHandleAddClient } from "@/lib/client-filter-shortcuts";
 import { useClientStorage } from "@/lib/use-client-storage";
 import { ClientActivityPanel } from "./ClientActivityPanel";
 import { ClientForm } from "./ClientForm";
+import { ClientStatsPanel } from "./ClientStatsPanel";
 import { ClientTable } from "./ClientTable";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ReminderPanel } from "./ReminderPanel";
@@ -179,6 +180,8 @@ export function ClientsDashboard() {
           <p className="text-sm font-medium text-rose-800">{error}</p>
         </section>
       ) : null}
+
+      {!showArchived ? <ClientStatsPanel clients={clients} /> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button
