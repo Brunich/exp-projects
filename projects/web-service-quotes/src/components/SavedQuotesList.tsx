@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { calculateQuoteTotals, formatCurrency, formatQuoteNumberLabel, isQuoteExpired } from "@/lib/quote";
-import { buildExpiredQuoteFollowUpEmail } from "@/lib/quote-follow-up-email";
+import { buildExpiredQuoteFollowUpEmail, buildRevisedQuoteEmail } from "@/lib/quote-follow-up-email";
 import { resolveBusinessName } from "@/lib/brand-settings";
 import {
   getSavedQuotesSnapshot,
@@ -13,6 +13,7 @@ import {
   subscribeQuotesStorage,
 } from "@/lib/quote-storage";
 import type { QuoteStatus, SavedQuote } from "@/lib/types";
+import type { RevisedQuoteEmailDraft as RevisedQuoteEmailDraftData } from "@/lib/quote-follow-up-email";
 import {
   QUOTE_VALIDITY_EXTENSION_PRESETS,
   formatValidityExtensionLabel,
@@ -21,6 +22,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuoteExpirationBadge } from "./QuoteExpirationBadge";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
+import { RevisedQuoteEmailDraft } from "./RevisedQuoteEmailDraft";
 import { useBrandSettings } from "@/lib/use-brand-settings";
 
 const STATUS_FILTERS: Array<QuoteStatus | "all" | "expired"> = [
@@ -49,6 +51,9 @@ function formatUpdatedAt(iso: string): string {
 
 export function SavedQuotesList() {
   const [pendingDelete, setPendingDelete] = useState<SavedQuote | null>(null);
+  const [revisedDrafts, setRevisedDrafts] = useState<
+    Record<string, RevisedQuoteEmailDraftData>
+  >({});
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all" | "expired">("all");
   const { settings } = useBrandSettings();
   const businessName = resolveBusinessName(
@@ -68,8 +73,29 @@ export function SavedQuotesList() {
     setPendingDelete(null);
   }
 
-  function handleExtendValidity(quoteId: string, days: number) {
-    extendSavedQuoteInStorage(window.localStorage, quoteId, days);
+  function handleExtendValidity(quote: SavedQuote, days: number) {
+    const previousValidUntil = quote.validUntil;
+    const updated = extendSavedQuoteInStorage(window.localStorage, quote.id, days);
+    if (!updated) {
+      return;
+    }
+
+    const draft = buildRevisedQuoteEmail(
+      updated,
+      { name: businessName },
+      { extensionDays: days, previousValidUntil },
+    );
+    if (draft) {
+      setRevisedDrafts((current) => ({ ...current, [quote.id]: draft }));
+    }
+  }
+
+  function dismissRevisedDraft(quoteId: string) {
+    setRevisedDrafts((current) => {
+      const next = { ...current };
+      delete next[quoteId];
+      return next;
+    });
   }
 
   const sorted = useMemo(
@@ -154,9 +180,18 @@ export function SavedQuotesList() {
           const followUpDraft = buildExpiredQuoteFollowUpEmail(quote, {
             name: businessName,
           });
+          const revisedDraft = revisedDrafts[quote.id];
 
           return (
             <li key={quote.id}>
+              {revisedDraft ? (
+                <div className="border-b border-zinc-200 px-4 py-4">
+                  <RevisedQuoteEmailDraft
+                    draft={revisedDraft}
+                    onDismiss={() => dismissRevisedDraft(quote.id)}
+                  />
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 hover:bg-zinc-50">
                 <Link href={`/quotes/${quote.id}`} className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -199,7 +234,7 @@ export function SavedQuotesList() {
                         <button
                           key={days}
                           type="button"
-                          onClick={() => handleExtendValidity(quote.id, days)}
+                          onClick={() => handleExtendValidity(quote, days)}
                           className="rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-50"
                           title={`Extend validity by ${days} days`}
                         >

@@ -22,6 +22,25 @@ export interface QuoteFollowUpEmailDraft {
   daysExpired: number;
 }
 
+export interface RevisedQuoteEmailContext {
+  extensionDays: number;
+  previousValidUntil: string;
+}
+
+export interface RevisedQuoteEmailDraft {
+  quoteId: string;
+  to: string;
+  clientName: string;
+  projectTitle: string;
+  quoteNumber: string;
+  subject: string;
+  body: string;
+  mailto: string;
+  validUntil: string;
+  previousValidUntil: string;
+  extensionDays: number;
+}
+
 function formatQuoteDate(dateString: string): string {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day).toLocaleDateString("en-US", {
@@ -124,4 +143,59 @@ export function buildExpiredQuoteFollowUpBatch(
     .map((quote) => buildExpiredQuoteFollowUpEmail(quote, sender, now))
     .filter((draft): draft is QuoteFollowUpEmailDraft => draft !== null)
     .sort((a, b) => b.daysExpired - a.daysExpired);
+}
+
+export function buildRevisedQuoteEmail(
+  quote: SavedQuote,
+  sender: QuoteFollowUpSender,
+  context: RevisedQuoteEmailContext,
+  now = new Date(),
+): RevisedQuoteEmailDraft | null {
+  if (quote.status !== "sent") {
+    return null;
+  }
+
+  const daysRemaining = daysUntilValidUntil(quote.validUntil, now);
+  if (daysRemaining === null || daysRemaining < 0) {
+    return null;
+  }
+
+  if (context.previousValidUntil >= quote.validUntil) {
+    return null;
+  }
+
+  const quoteLabel = formatQuoteNumberLabel(quote.quoteNumber);
+  const projectTitle = quote.projectTitle.trim() || "your project";
+  const validUntilLabel = formatQuoteDate(quote.validUntil);
+  const previousValidUntilLabel = formatQuoteDate(context.previousValidUntil);
+  const totals = calculateQuoteTotals(quote.lineItems, quote.taxRatePercent);
+
+  const subject = `Updated quote ${quoteLabel} — valid through ${validUntilLabel}`;
+
+  const body = [
+    `Hi ${firstName(quote.clientName)},`,
+    "",
+    `Good news — I've extended quote ${quoteLabel} for ${projectTitle}. It's now valid through ${validUntilLabel} (previously ${previousValidUntilLabel}).`,
+    "",
+    `The quoted total remains ${formatCurrency(totals.total)}. Let me know if you'd like any changes before we move forward.`,
+    "",
+    "Best,",
+    sender.name.trim() || "Your team",
+  ]
+    .join("\n")
+    .trim();
+
+  return {
+    quoteId: quote.id,
+    to: quote.clientEmail?.trim() ?? "",
+    clientName: quote.clientName,
+    projectTitle,
+    quoteNumber: quote.quoteNumber,
+    subject,
+    body,
+    mailto: buildMailtoLink(quote.clientEmail ?? "", subject, body),
+    validUntil: quote.validUntil,
+    previousValidUntil: context.previousValidUntil,
+    extensionDays: context.extensionDays,
+  };
 }

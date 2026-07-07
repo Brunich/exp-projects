@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { SavedQuote } from "@/lib/types";
 import {
   QUOTE_VALIDITY_EXTENSION_PRESETS,
@@ -7,8 +8,10 @@ import {
 } from "@/lib/quote";
 import {
   buildExpiredQuoteFollowUpEmail,
+  buildRevisedQuoteEmail,
   type QuoteFollowUpSender,
 } from "@/lib/quote-follow-up-email";
+import { RevisedQuoteEmailDraft } from "./RevisedQuoteEmailDraft";
 
 interface QuoteFollowUpDraftProps {
   quote: SavedQuote;
@@ -23,10 +26,37 @@ export function QuoteFollowUpDraft({
   onExtendValidity,
   className = "",
 }: QuoteFollowUpDraftProps) {
+  const [extensionContext, setExtensionContext] = useState<{
+    extensionDays: number;
+    previousValidUntil: string;
+  } | null>(null);
+
+  const revisedDraft =
+    extensionContext &&
+    buildRevisedQuoteEmail(quote, sender, extensionContext);
+
+  if (revisedDraft) {
+    return (
+      <RevisedQuoteEmailDraft
+        draft={revisedDraft}
+        onDismiss={() => setExtensionContext(null)}
+        className={className}
+      />
+    );
+  }
+
   const draft = buildExpiredQuoteFollowUpEmail(quote, sender);
 
   if (!draft) {
     return null;
+  }
+
+  function handleExtendValidity(days: number) {
+    setExtensionContext({
+      extensionDays: days,
+      previousValidUntil: quote.validUntil,
+    });
+    onExtendValidity?.(days);
   }
 
   return (
@@ -58,7 +88,7 @@ export function QuoteFollowUpDraft({
             <button
               key={days}
               type="button"
-              onClick={() => onExtendValidity(days)}
+              onClick={() => handleExtendValidity(days)}
               className="inline-flex items-center rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100"
             >
               {formatValidityExtensionLabel(days)}

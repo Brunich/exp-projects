@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { resolveBusinessName } from "@/lib/brand-settings";
-import { buildExpiredQuoteFollowUpBatch } from "@/lib/quote-follow-up-email";
+import {
+  buildExpiredQuoteFollowUpBatch,
+  buildRevisedQuoteEmail,
+  type RevisedQuoteEmailDraft as RevisedQuoteEmailDraftData,
+} from "@/lib/quote-follow-up-email";
 import {
   getSavedQuotesSnapshot,
   extendSavedQuoteInStorage,
@@ -14,8 +18,12 @@ import {
   QUOTE_VALIDITY_EXTENSION_PRESETS,
   formatValidityExtensionLabel,
 } from "@/lib/quote";
+import { RevisedQuoteEmailDraft } from "./RevisedQuoteEmailDraft";
 
 export function ExpiredQuotesBanner() {
+  const [revisedDrafts, setRevisedDrafts] = useState<
+    RevisedQuoteEmailDraftData[]
+  >([]);
   const quotes = useSyncExternalStore(
     subscribeQuotesStorage,
     getSavedQuotesSnapshot,
@@ -33,7 +41,49 @@ export function ExpiredQuotesBanner() {
   );
 
   function handleExtendValidity(quoteId: string, days: number) {
-    extendSavedQuoteInStorage(window.localStorage, quoteId, days);
+    const quote = quotes.find((item) => item.id === quoteId);
+    if (!quote) {
+      return;
+    }
+
+    const previousValidUntil = quote.validUntil;
+    const updated = extendSavedQuoteInStorage(
+      window.localStorage,
+      quoteId,
+      days,
+    );
+    if (!updated) {
+      return;
+    }
+
+    const draft = buildRevisedQuoteEmail(
+      updated,
+      { name: businessName },
+      { extensionDays: days, previousValidUntil },
+    );
+    if (draft) {
+      setRevisedDrafts((current) => [draft, ...current]);
+    }
+  }
+
+  function dismissRevisedDraft(quoteId: string) {
+    setRevisedDrafts((current) =>
+      current.filter((draft) => draft.quoteId !== quoteId),
+    );
+  }
+
+  if (revisedDrafts.length > 0) {
+    return (
+      <div className="mt-10 space-y-3">
+        {revisedDrafts.map((draft) => (
+          <RevisedQuoteEmailDraft
+            key={draft.quoteId}
+            draft={draft}
+            onDismiss={() => dismissRevisedDraft(draft.quoteId)}
+          />
+        ))}
+      </div>
+    );
   }
 
   if (followUpDrafts.length === 0) {

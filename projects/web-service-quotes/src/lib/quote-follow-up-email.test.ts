@@ -4,6 +4,7 @@ import {
   buildExpiredQuoteFollowUpBatch,
   buildExpiredQuoteFollowUpEmail,
   buildMailtoLink,
+  buildRevisedQuoteEmail,
   isExpiredSentQuote,
 } from "./quote-follow-up-email";
 
@@ -105,6 +106,48 @@ describe("buildExpiredQuoteFollowUpBatch", () => {
     expect(drafts).toHaveLength(2);
     expect(drafts[0].quoteId).toBe("older");
     expect(drafts[1].quoteId).toBe("quote-1");
+  });
+});
+
+describe("buildRevisedQuoteEmail", () => {
+  it("builds a revised quote draft after extending an expired sent quote", () => {
+    const draft = buildRevisedQuoteEmail(
+      { ...expiredSentQuote, validUntil: "2026-07-18" },
+      { name: "Green Lawn Co." },
+      { extensionDays: 14, previousValidUntil: "2026-07-04" },
+      now,
+    );
+
+    expect(draft).not.toBeNull();
+    expect(draft?.subject).toContain("valid through July 18, 2026");
+    expect(draft?.body).toContain("Hi Jane,");
+    expect(draft?.body).toContain("extended quote");
+    expect(draft?.body).toContain("previously July 4, 2026");
+    expect(draft?.body).toContain("$162.38");
+    expect(draft?.mailto).toMatch(/^mailto:jane%40example.com/);
+    expect(draft?.extensionDays).toBe(14);
+  });
+
+  it("returns null when the quote is still expired", () => {
+    const draft = buildRevisedQuoteEmail(
+      expiredSentQuote,
+      { name: "Green Lawn Co." },
+      { extensionDays: 14, previousValidUntil: "2026-07-04" },
+      now,
+    );
+
+    expect(draft).toBeNull();
+  });
+
+  it("returns null for draft quotes", () => {
+    const draft = buildRevisedQuoteEmail(
+      { ...expiredSentQuote, status: "draft", validUntil: "2026-07-18" },
+      { name: "Green Lawn Co." },
+      { extensionDays: 14, previousValidUntil: "2026-07-04" },
+      now,
+    );
+
+    expect(draft).toBeNull();
   });
 });
 
