@@ -3,6 +3,8 @@ import { createLineItem } from "./quote";
 import {
   deleteSavedQuote,
   draftToSavedQuote,
+  extendSavedQuoteInStorage,
+  extendSavedQuoteValidity,
   parseDraftState,
   parseSavedQuotes,
   QUOTES_DRAFT_KEY,
@@ -224,5 +226,50 @@ describe("removeSavedQuoteFromStorage", () => {
     const draftState = parseDraftState(storage.getItem(QUOTES_DRAFT_KEY));
     expect(draftState.savedQuoteId).toBeUndefined();
     expect(draftState.draft.clientName).toBe("");
+  });
+});
+
+describe("extendSavedQuoteValidity", () => {
+  const now = new Date("2026-07-06T12:00:00.000Z");
+
+  it("extends an expired quote from today", () => {
+    const expired = { ...sampleSavedQuote, validUntil: "2026-07-04" };
+    const result = extendSavedQuoteValidity([expired], "quote-1", 14, now);
+
+    expect(result?.quote.validUntil).toBe("2026-07-20");
+    expect(result?.quotes[0].updatedAt).toBe(now.toISOString());
+  });
+
+  it("returns null when the quote id is missing", () => {
+    expect(
+      extendSavedQuoteValidity([sampleSavedQuote], "missing", 14, now),
+    ).toBeNull();
+  });
+});
+
+describe("extendSavedQuoteInStorage", () => {
+  const now = new Date("2026-07-06T12:00:00.000Z");
+
+  it("persists the new valid-until date and syncs the draft", () => {
+    const storage = createMemoryStorage();
+    const expired = { ...sampleSavedQuote, validUntil: "2026-07-04" };
+    storage.setItem(QUOTES_LIST_KEY, serializeSavedQuotes([expired]));
+    storage.setItem(
+      QUOTES_DRAFT_KEY,
+      serializeDraftState({
+        draft: { ...sampleDraft, validUntil: "2026-07-04" },
+        savedQuoteId: "quote-1",
+      }),
+    );
+
+    const updated = extendSavedQuoteInStorage(storage, "quote-1", 7, now);
+
+    expect(updated?.validUntil).toBe("2026-07-13");
+    expect(parseSavedQuotes(storage.getItem(QUOTES_LIST_KEY))[0].validUntil).toBe(
+      "2026-07-13",
+    );
+    expect(parseDraftState(storage.getItem(QUOTES_DRAFT_KEY)).draft.validUntil).toBe(
+      "2026-07-13",
+    );
   });
 });

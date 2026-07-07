@@ -4,9 +4,11 @@ import {
   createEmptyQuote,
   createLineItem,
   daysUntilValidUntil,
+  extendQuoteValidityDate,
   formatCurrency,
   formatExpirationReminder,
   formatQuoteStatusLabel,
+  formatValidityExtensionLabel,
   generateNextQuoteNumber,
   getQuoteExpirationState,
   isQuoteExpired,
@@ -116,5 +118,15 @@ describe("quote expiration helpers", () => {
     expect(shouldShowExpirationReminder("accepted", "2026-07-04", now)).toBe(
       false,
     );
+  });
+
+  it("extends expired quotes from today and active quotes from valid-until", () => {
+    expect(extendQuoteValidityDate("2026-07-04", 14, now)).toBe("2026-07-20");
+    expect(extendQuoteValidityDate("2026-07-20", 7, now)).toBe("2026-07-27");
+    expect(extendQuoteValidityDate("2026-07-04", 0, now)).toBeNull();
+  });
+
+  it("formats validity extension button labels", () => {
+    expect(formatValidityExtensionLabel(14)).toBe("+14 days");
   });
 });

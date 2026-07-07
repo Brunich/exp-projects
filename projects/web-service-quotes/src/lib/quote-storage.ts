@@ -1,4 +1,9 @@
-import { createEmptyQuote, generateNextQuoteNumber, isQuoteStatus } from "./quote";
+import {
+  createEmptyQuote,
+  extendQuoteValidityDate,
+  generateNextQuoteNumber,
+  isQuoteStatus,
+} from "./quote";
 import type { QuoteDraft, QuoteDraftState, QuoteLineItem, SavedQuote } from "./types";
 
 export const QUOTES_DRAFT_KEY = "service-quotes:draft";
@@ -166,6 +171,70 @@ export function getSavedQuoteById(
   id: string,
 ): SavedQuote | undefined {
   return quotes.find((quote) => quote.id === id);
+}
+
+export function extendSavedQuoteValidity(
+  quotes: SavedQuote[],
+  quoteId: string,
+  extensionDays: number,
+  now = new Date(),
+): { quotes: SavedQuote[]; quote: SavedQuote } | null {
+  const index = quotes.findIndex((item) => item.id === quoteId);
+  if (index === -1) {
+    return null;
+  }
+
+  const current = quotes[index];
+  const validUntil = extendQuoteValidityDate(
+    current.validUntil,
+    extensionDays,
+    now,
+  );
+  if (!validUntil) {
+    return null;
+  }
+
+  const quote: SavedQuote = {
+    ...current,
+    validUntil,
+    updatedAt: now.toISOString(),
+  };
+  const nextQuotes = [...quotes];
+  nextQuotes[index] = quote;
+
+  return { quotes: nextQuotes, quote };
+}
+
+export function extendSavedQuoteInStorage(
+  storage: Storage | null,
+  quoteId: string,
+  extensionDays: number,
+  now = new Date(),
+): SavedQuote | null {
+  if (!storage) {
+    return null;
+  }
+
+  const quotes = loadSavedQuotesFromStorage(storage);
+  const result = extendSavedQuoteValidity(quotes, quoteId, extensionDays, now);
+  if (!result) {
+    return null;
+  }
+
+  saveSavedQuotesToStorage(storage, result.quotes);
+
+  const draftState = loadDraftFromStorage(storage);
+  if (draftState.savedQuoteId === quoteId) {
+    saveDraftToStorage(storage, {
+      ...draftState,
+      draft: {
+        ...draftState.draft,
+        validUntil: result.quote.validUntil,
+      },
+    });
+  }
+
+  return result.quote;
 }
 
 export function loadDraftFromStorage(storage: Storage | null): QuoteDraftState {

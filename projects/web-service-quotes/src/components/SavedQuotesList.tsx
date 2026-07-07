@@ -7,11 +7,16 @@ import { buildExpiredQuoteFollowUpEmail } from "@/lib/quote-follow-up-email";
 import { resolveBusinessName } from "@/lib/brand-settings";
 import {
   getSavedQuotesSnapshot,
+  extendSavedQuoteInStorage,
   removeSavedQuoteFromStorage,
   savedQuoteToDraft,
   subscribeQuotesStorage,
 } from "@/lib/quote-storage";
 import type { QuoteStatus, SavedQuote } from "@/lib/types";
+import {
+  QUOTE_VALIDITY_EXTENSION_PRESETS,
+  formatValidityExtensionLabel,
+} from "@/lib/quote";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuoteExpirationBadge } from "./QuoteExpirationBadge";
@@ -61,6 +66,10 @@ export function SavedQuotesList() {
 
     removeSavedQuoteFromStorage(window.localStorage, pendingDelete.id);
     setPendingDelete(null);
+  }
+
+  function handleExtendValidity(quoteId: string, days: number) {
+    extendSavedQuoteInStorage(window.localStorage, quoteId, days);
   }
 
   const sorted = useMemo(
@@ -179,12 +188,25 @@ export function SavedQuotesList() {
                     className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {followUpDraft ? (
-                    <a
-                      href={followUpDraft.mailto}
-                      className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
-                    >
-                      Follow-up
-                    </a>
+                    <>
+                      <a
+                        href={followUpDraft.mailto}
+                        className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                      >
+                        Follow-up
+                      </a>
+                      {QUOTE_VALIDITY_EXTENSION_PRESETS.map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => handleExtendValidity(quote.id, days)}
+                          className="rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-50"
+                          title={`Extend validity by ${days} days`}
+                        >
+                          {formatValidityExtensionLabel(days)}
+                        </button>
+                      ))}
+                    </>
                   ) : null}
                   <button
                     type="button"

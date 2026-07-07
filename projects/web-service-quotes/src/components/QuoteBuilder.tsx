@@ -43,6 +43,7 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
     saveQuote,
     startNewQuote,
     deleteQuote,
+    extendValidity,
   } = useQuoteDraft({ savedQuoteId, startFresh });
   const { settings } = useBrandSettings();
   const businessName = resolveBusinessName(
@@ -187,6 +188,7 @@ export function QuoteBuilder({ savedQuoteId, startFresh }: QuoteBuilderProps) {
         <QuoteFollowUpDraft
           quote={followUpQuote}
           sender={{ name: businessName }}
+          onExtendValidity={extendValidity}
         />
       ) : null}
 

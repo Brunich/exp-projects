@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuoteDraft, QuoteDraftState, SavedQuote } from "./types";
-import { createEmptyQuote, generateNextQuoteNumber } from "./quote";
+import { createEmptyQuote, extendQuoteValidityDate, generateNextQuoteNumber } from "./quote";
 import {
   draftToSavedQuote,
   getSavedQuoteById,
@@ -187,6 +187,74 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
     return true;
   }, [draftState.savedQuoteId]);
 
+  const extendValidity = useCallback(
+    (extensionDays: number) => {
+      const nextValidUntil = extendQuoteValidityDate(
+        draftState.draft.validUntil,
+        extensionDays,
+      );
+      if (!nextValidUntil) {
+        return false;
+      }
+
+      updateDraft((current) => ({
+        ...current,
+        validUntil: nextValidUntil,
+      }));
+
+      if (!draftState.savedQuoteId) {
+        setSaveMessage(`Valid until ${nextValidUntil}`);
+        if (saveMessageTimer.current) {
+          clearTimeout(saveMessageTimer.current);
+        }
+        saveMessageTimer.current = setTimeout(() => setSaveMessage(null), 2500);
+        return true;
+      }
+
+      const storage = window.localStorage;
+      const quotes = loadSavedQuotesFromStorage(storage);
+      const existing = getSavedQuoteById(quotes, draftState.savedQuoteId);
+      if (!existing) {
+        return false;
+      }
+
+      const saved = draftToSavedQuote(
+        { ...draftState.draft, validUntil: nextValidUntil },
+        existing.id,
+        {
+          createdAt: existing.createdAt,
+          templateId: draftState.selectedTemplateId,
+          existingQuotes: quotes,
+        },
+      );
+
+      const nextQuotes = upsertSavedQuote(quotes, saved);
+      saveSavedQuotesToStorage(storage, nextQuotes);
+
+      const nextState: QuoteDraftState = {
+        ...draftState,
+        draft: savedQuoteToDraft(saved),
+        savedQuoteId: existing.id,
+      };
+      saveDraftToStorage(storage, nextState);
+      notifyQuotesStorageUpdated();
+
+      setStore((current) => ({
+        draftState: nextState,
+        savedQuotes: nextQuotes,
+        hydrated: current.hydrated,
+      }));
+      setSaveMessage(`Extended to ${nextValidUntil}`);
+
+      if (saveMessageTimer.current) {
+        clearTimeout(saveMessageTimer.current);
+      }
+      saveMessageTimer.current = setTimeout(() => setSaveMessage(null), 2500);
+      return true;
+    },
+    [draftState, updateDraft],
+  );
+
   return {
     quote: draftState.draft,
     selectedTemplateId: draftState.selectedTemplateId,
@@ -199,5 +267,6 @@ export function useQuoteDraft(options: UseQuoteDraftOptions = {}) {
     saveQuote,
     startNewQuote,
     deleteQuote,
+    extendValidity,
   };
 }

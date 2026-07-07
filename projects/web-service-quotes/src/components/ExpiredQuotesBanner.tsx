@@ -6,9 +6,14 @@ import { resolveBusinessName } from "@/lib/brand-settings";
 import { buildExpiredQuoteFollowUpBatch } from "@/lib/quote-follow-up-email";
 import {
   getSavedQuotesSnapshot,
+  extendSavedQuoteInStorage,
   subscribeQuotesStorage,
 } from "@/lib/quote-storage";
 import { useBrandSettings } from "@/lib/use-brand-settings";
+import {
+  QUOTE_VALIDITY_EXTENSION_PRESETS,
+  formatValidityExtensionLabel,
+} from "@/lib/quote";
 
 export function ExpiredQuotesBanner() {
   const quotes = useSyncExternalStore(
@@ -26,6 +31,10 @@ export function ExpiredQuotesBanner() {
     () => buildExpiredQuoteFollowUpBatch(quotes, { name: businessName }),
     [quotes, businessName],
   );
+
+  function handleExtendValidity(quoteId: string, days: number) {
+    extendSavedQuoteInStorage(window.localStorage, quoteId, days);
+  }
 
   if (followUpDrafts.length === 0) {
     return null;
@@ -61,13 +70,24 @@ export function ExpiredQuotesBanner() {
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {followUpDrafts.slice(0, 3).map((draft) => (
-          <a
-            key={draft.quoteId}
-            href={draft.mailto}
-            className="inline-flex items-center rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100"
-          >
-            Email {draft.clientName.trim() || draft.projectTitle}
-          </a>
+          <div key={draft.quoteId} className="flex flex-wrap gap-2">
+            <a
+              href={draft.mailto}
+              className="inline-flex items-center rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100"
+            >
+              Email {draft.clientName.trim() || draft.projectTitle}
+            </a>
+            {QUOTE_VALIDITY_EXTENSION_PRESETS.map((days) => (
+              <button
+                key={days}
+                type="button"
+                onClick={() => handleExtendValidity(draft.quoteId, days)}
+                className="inline-flex items-center rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+              >
+                {formatValidityExtensionLabel(days)}
+              </button>
+            ))}
+          </div>
         ))}
         {count > 3 ? (
           <span className="self-center text-xs text-rose-700">

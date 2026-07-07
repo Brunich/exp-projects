@@ -4,6 +4,11 @@ export const QUOTE_STATUSES: QuoteStatus[] = ["draft", "sent", "accepted"];
 
 export const EXPIRING_SOON_DAYS = 3;
 
+export const QUOTE_VALIDITY_EXTENSION_PRESETS = [7, 14, 30] as const;
+
+export type QuoteValidityExtensionDays =
+  (typeof QUOTE_VALIDITY_EXTENSION_PRESETS)[number];
+
 export type QuoteExpirationState = "active" | "expiring_soon" | "expired";
 
 export function parseQuoteDate(value: string): Date | null {
@@ -54,6 +59,28 @@ export function getQuoteExpirationState(
 
 export function isQuoteExpired(validUntil: string, now = new Date()): boolean {
   return getQuoteExpirationState(validUntil, now) === "expired";
+}
+
+export function extendQuoteValidityDate(
+  validUntil: string,
+  extensionDays: number,
+  now = new Date(),
+): string | null {
+  const current = parseQuoteDate(validUntil);
+  if (!current || extensionDays <= 0 || !Number.isInteger(extensionDays)) {
+    return null;
+  }
+
+  const today = startOfUtcDay(now);
+  const base = current.getTime() < today.getTime() ? today : current;
+  const next = new Date(base);
+  next.setUTCDate(next.getUTCDate() + extensionDays);
+
+  return next.toISOString().slice(0, 10);
+}
+
+export function formatValidityExtensionLabel(days: QuoteValidityExtensionDays): string {
+  return `+${days} days`;
 }
 
 export function shouldShowExpirationReminder(

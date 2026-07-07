@@ -2,6 +2,10 @@
 
 import type { SavedQuote } from "@/lib/types";
 import {
+  QUOTE_VALIDITY_EXTENSION_PRESETS,
+  formatValidityExtensionLabel,
+} from "@/lib/quote";
+import {
   buildExpiredQuoteFollowUpEmail,
   type QuoteFollowUpSender,
 } from "@/lib/quote-follow-up-email";
@@ -9,12 +13,14 @@ import {
 interface QuoteFollowUpDraftProps {
   quote: SavedQuote;
   sender: QuoteFollowUpSender;
+  onExtendValidity?: (days: number) => void;
   className?: string;
 }
 
 export function QuoteFollowUpDraft({
   quote,
   sender,
+  onExtendValidity,
   className = "",
 }: QuoteFollowUpDraftProps) {
   const draft = buildExpiredQuoteFollowUpEmail(quote, sender);
@@ -43,6 +49,23 @@ export function QuoteFollowUpDraft({
           Open in email
         </a>
       </div>
+      {onExtendValidity ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-rose-800">
+            Extend validity:
+          </span>
+          {QUOTE_VALIDITY_EXTENSION_PRESETS.map((days) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => onExtendValidity(days)}
+              className="inline-flex items-center rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100"
+            >
+              {formatValidityExtensionLabel(days)}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="mt-4 rounded-lg border border-rose-200 bg-white p-3 font-mono text-xs text-zinc-800">
         <p>
           <span className="font-semibold text-zinc-600">To:</span>{" "}
