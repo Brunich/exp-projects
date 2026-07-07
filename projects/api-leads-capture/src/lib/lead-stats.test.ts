@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Lead } from "../types.js";
-import { computeLeadStats, parseLeadStatsQuery } from "./lead-stats.js";
+import {
+  buildDailyBuckets,
+  computeLeadStats,
+  DEFAULT_BUCKET_DAYS,
+  parseLeadStatsQuery,
+} from "./lead-stats.js";
 
 function makeLead(overrides: Partial<Lead> & Pick<Lead, "email">): Lead {
   return {
@@ -22,12 +27,66 @@ describe("parseLeadStatsQuery", () => {
     expect(result).toEqual({ ok: true, query: { since: "2026-07-01" } });
   });
 
+  it("accepts a valid bucketDays value", () => {
+    expect(parseLeadStatsQuery({ bucketDays: "30" })).toEqual({
+      ok: true,
+      query: { bucketDays: 30 },
+    });
+  });
+
   it("rejects invalid since values", () => {
     const result = parseLeadStatsQuery({ since: "not-a-date" });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.details.since).toBeDefined();
     }
+  });
+
+  it("rejects invalid bucketDays values", () => {
+    const result = parseLeadStatsQuery({ bucketDays: "0" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.details.bucketDays).toBeDefined();
+    }
+  });
+});
+
+describe("buildDailyBuckets", () => {
+  const now = new Date("2026-07-07T15:00:00.000Z");
+
+  it("returns zero-filled buckets for the requested window", () => {
+    expect(buildDailyBuckets([], 3, now)).toEqual([
+      { date: "2026-07-05", count: 0 },
+      { date: "2026-07-06", count: 0 },
+      { date: "2026-07-07", count: 0 },
+    ]);
+  });
+
+  it("counts leads per day inside the bucket window", () => {
+    const leads: Lead[] = [
+      makeLead({
+        email: "a@example.com",
+        createdAt: "2026-07-05T10:00:00.000Z",
+      }),
+      makeLead({
+        email: "b@example.com",
+        createdAt: "2026-07-05T18:00:00.000Z",
+      }),
+      makeLead({
+        email: "c@example.com",
+        createdAt: "2026-07-07T08:00:00.000Z",
+      }),
+      makeLead({
+        email: "d@example.com",
+        createdAt: "2026-07-01T10:00:00.000Z",
+      }),
+    ];
+
+    expect(buildDailyBuckets(leads, 3, now)).toEqual([
+      { date: "2026-07-05", count: 2 },
+      { date: "2026-07-06", count: 0 },
+      { date: "2026-07-07", count: 1 },
+    ]);
   });
 });
 
@@ -42,11 +101,18 @@ describe("computeLeadStats", () => {
   });
 
   it("returns zeroed stats for an empty store", () => {
-    expect(computeLeadStats([])).toEqual({
-      total: 0,
-      bySource: { landing: 0, referral: 0, ads: 0, other: 0 },
-      recent: { today: 0, last7Days: 0, last30Days: 0 },
+    const stats = computeLeadStats([]);
+
+    expect(stats.total).toBe(0);
+    expect(stats.bySource).toEqual({
+      landing: 0,
+      referral: 0,
+      ads: 0,
+      other: 0,
     });
+    expect(stats.recent).toEqual({ today: 0, last7Days: 0, last30Days: 0 });
+    expect(stats.dailyBuckets).toHaveLength(DEFAULT_BUCKET_DAYS);
+    expect(stats.dailyBuckets.every((bucket) => bucket.count === 0)).toBe(true);
   });
 
   it("counts totals by source and recent windows", () => {
@@ -77,10 +143,20 @@ describe("computeLeadStats", () => {
       }),
     ];
 
-    expect(computeLeadStats(leads)).toEqual({
-      total: 4,
-      bySource: { landing: 1, referral: 1, ads: 1, other: 1 },
-      recent: { today: 1, last7Days: 2, last30Days: 3 },
+    const stats = computeLeadStats(leads);
+
+    expect(stats.total).toBe(4);
+    expect(stats.bySource).toEqual({
+      landing: 1,
+      referral: 1,
+      ads: 1,
+      other: 1,
+    });
+    expect(stats.recent).toEqual({ today: 1, last7Days: 2, last30Days: 3 });
+    expect(stats.dailyBuckets.at(-1)).toEqual({ date: "2026-07-07", count: 1 });
+    expect(stats.dailyBuckets.find((bucket) => bucket.date === "2026-07-03")).toEqual({
+      date: "2026-07-03",
+      count: 1,
     });
   });
 
@@ -110,5 +186,24 @@ describe("computeLeadStats", () => {
       other: 0,
     });
     expect(stats.recent.last7Days).toBe(1);
+    expect(stats.dailyBuckets.find((bucket) => bucket.date === "2026-07-05")).toEqual({
+      date: "2026-07-05",
+      count: 1,
+    });
+  });
+
+  it("honors a custom bucketDays window", () => {
+    const leads: Lead[] = [
+      makeLead({
+        email: "today@example.com",
+        createdAt: "2026-07-07T10:00:00.000Z",
+      }),
+    ];
+
+    const stats = computeLeadStats(leads, { bucketDays: 5 });
+
+    expect(stats.dailyBuckets).toHaveLength(5);
+    expect(stats.dailyBuckets[0]?.date).toBe("2026-07-03");
+    expect(stats.dailyBuckets.at(-1)).toEqual({ date: "2026-07-07", count: 1 });
   });
 });

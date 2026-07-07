@@ -11,7 +11,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - Honeypot field check (`website` by default) silently rejects bots with a decoy 201
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
 - `GET /leads` — list stored leads with optional filters, pagination, and CSV export (API key required)
-- `GET /leads/stats` — lead summary totals by source and recent activity windows (API key required)
+- `GET /leads/stats` — lead summary totals by source, recent activity windows, and daily buckets for charts (API key required)
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
@@ -171,9 +171,10 @@ Returns aggregate counts for dashboards without loading the full lead list.
 
 Optional query parameters:
 
-| Param   | Description                                              |
-| ------- | -------------------------------------------------------- |
-| `since` | Only include leads created on or after `YYYY-MM-DD`      |
+| Param        | Description                                              |
+| ------------ | -------------------------------------------------------- |
+| `since`      | Only include leads created on or after `YYYY-MM-DD`      |
+| `bucketDays` | Daily chart window in days (1–90, default `14`)          |
 
 **Response `200`**
 
@@ -191,13 +192,20 @@ Optional query parameters:
       "today": 3,
       "last7Days": 15,
       "last30Days": 38
-    }
+    },
+    "dailyBuckets": [
+      { "date": "2026-06-24", "count": 1 },
+      { "date": "2026-06-25", "count": 0 },
+      { "date": "2026-07-07", "count": 3 }
+    ]
   },
   "meta": {}
 }
 ```
 
-When `since` is set, `meta` includes `{ "since": "2026-07-01" }` and all counts apply to that filtered set.
+`dailyBuckets` is oldest-first with zero-filled days so charting libraries can plot a continuous series. The window ends today and spans `bucketDays` days (default 14).
+
+When `since` is set, `meta` includes `{ "since": "2026-07-01" }` and all counts apply to that filtered set. When `bucketDays` is set explicitly, `meta` includes `{ "bucketDays": 30 }`.
 
 ### Webhook payload
 
@@ -458,4 +466,4 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 
 ## Next steps
 
-- Daily lead count buckets on `GET /leads/stats` for charting dashboards
+- Source breakdown on daily lead buckets for stacked charts

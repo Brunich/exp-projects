@@ -1,6 +1,9 @@
 import type { Lead } from "../types.js";
 import { applyLeadFilters } from "./lead-filters.js";
 
+export const DEFAULT_BUCKET_DAYS = 14;
+export const MAX_BUCKET_DAYS = 90;
+
 export interface LeadStatsRecent {
   today: number;
   last7Days: number;
@@ -14,14 +17,21 @@ export interface LeadStatsBySource {
   other: number;
 }
 
+export interface LeadDailyBucket {
+  date: string;
+  count: number;
+}
+
 export interface LeadStats {
   total: number;
   bySource: LeadStatsBySource;
   recent: LeadStatsRecent;
+  dailyBuckets: LeadDailyBucket[];
 }
 
 export interface LeadStatsQuery {
   since?: string;
+  bucketDays?: number;
 }
 
 export interface ParseLeadStatsQueryResult {
@@ -49,6 +59,21 @@ export function parseLeadStatsQuery(
     }
   }
 
+  if (query.bucketDays !== undefined) {
+    const bucketDays = Number(query.bucketDays);
+    if (
+      !Number.isInteger(bucketDays) ||
+      bucketDays < 1 ||
+      bucketDays > MAX_BUCKET_DAYS
+    ) {
+      details.bucketDays = [
+        `Must be an integer between 1 and ${MAX_BUCKET_DAYS}`,
+      ];
+    } else {
+      parsed.bucketDays = bucketDays;
+    }
+  }
+
   if (Object.keys(details).length > 0) {
     return { ok: false, details };
   }
@@ -59,9 +84,10 @@ export function parseLeadStatsQuery(
 export function computeLeadStats(
   leads: Lead[],
   query: LeadStatsQuery = {},
+  now: Date = new Date(),
 ): LeadStats {
   const filtered = applyLeadFilters(leads, query);
-  const now = new Date();
+  const bucketDays = query.bucketDays ?? DEFAULT_BUCKET_DAYS;
   const todayStart = startOfDay(now);
   const last7DaysStart = startOfDay(addDays(now, -6));
   const last30DaysStart = startOfDay(addDays(now, -29));
@@ -91,7 +117,35 @@ export function computeLeadStats(
     total: filtered.length,
     bySource,
     recent: { today, last7Days, last30Days },
+    dailyBuckets: buildDailyBuckets(filtered, bucketDays, now),
   };
+}
+
+export function buildDailyBuckets(
+  leads: Lead[],
+  bucketDays: number,
+  now: Date = new Date(),
+): LeadDailyBucket[] {
+  const start = startOfDay(addDays(now, -(bucketDays - 1)));
+  const counts = new Map<string, number>();
+
+  for (let dayIndex = 0; dayIndex < bucketDays; dayIndex += 1) {
+    counts.set(formatDateKey(addDays(start, dayIndex)), 0);
+  }
+
+  for (const lead of leads) {
+    const createdAt = new Date(lead.createdAt);
+    if (createdAt < start) {
+      continue;
+    }
+
+    const key = formatDateKey(startOfDay(createdAt));
+    if (counts.has(key)) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+
+  return [...counts.entries()].map(([date, count]) => ({ date, count }));
 }
 
 function emptyBySource(): LeadStatsBySource {
@@ -111,6 +165,13 @@ function isValidDateString(value: string): boolean {
   const [year, month, day] = value.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   return !Number.isNaN(date.getTime());
+}
+
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function startOfDay(date: Date): Date {

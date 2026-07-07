@@ -56,10 +56,19 @@ export async function registerLeadRoutes(
     }
 
     const stats = await config.store.stats(parsed.query);
+    const meta: Record<string, string | number> = {};
+
+    if (parsed.query.since) {
+      meta.since = parsed.query.since;
+    }
+
+    if (parsed.query.bucketDays !== undefined) {
+      meta.bucketDays = parsed.query.bucketDays;
+    }
 
     return reply.send({
       data: stats,
-      meta: parsed.query.since ? { since: parsed.query.since } : {},
+      meta,
     });
   });
 

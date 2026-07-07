@@ -115,7 +115,22 @@ describe("lead routes", () => {
     expect(body.data.bySource.referral).toBe(1);
     expect(body.data.recent.today).toBe(2);
     expect(body.data.recent.last7Days).toBe(2);
+    expect(body.data.dailyBuckets).toHaveLength(14);
+    expect(body.data.dailyBuckets.at(-1)?.count).toBe(2);
     expect(body.meta).toEqual({});
+  });
+
+  it("returns custom daily bucket windows when bucketDays is set", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/leads/stats?bucketDays=7",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.dailyBuckets).toHaveLength(7);
+    expect(body.meta).toEqual({ bucketDays: 7 });
   });
 
   it("returns 400 for invalid stats query params", async () => {

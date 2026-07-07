@@ -19,7 +19,6 @@ function makeItem(
     attempts: 1,
     maxAttempts: 5,
     nextRetryAt: "2026-07-07T10:00:00.000Z",
-    status: overrides.status,
     createdAt: "2026-07-07T09:00:00.000Z",
     updatedAt: "2026-07-07T09:00:00.000Z",
     ...overrides,
