@@ -40,6 +40,18 @@ export function getQuoteRevisionTimeline(quote: SavedQuote): QuoteRevisionNote[]
   );
 }
 
+export function getQuoteRevisionCount(quote: SavedQuote): number {
+  return quote.revisionHistory?.length ?? 0;
+}
+
+export function formatRevisionCountLabel(count: number): string | null {
+  if (count <= 0) {
+    return null;
+  }
+
+  return count === 1 ? "1 revision" : `${count} revisions`;
+}
+
 export function formatRevisionSummary(note: QuoteRevisionNote): string {
   switch (note.type) {
     case "validity_extended": {

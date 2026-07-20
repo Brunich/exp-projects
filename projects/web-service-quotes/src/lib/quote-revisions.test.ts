@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   appendRevisionNotes,
   createValidityExtensionRevision,
+  formatRevisionCountLabel,
   formatRevisionSummary,
+  getQuoteRevisionCount,
   getQuoteRevisionTimeline,
   normalizeRevisionHistory,
 } from "./quote-revisions";
@@ -80,6 +82,41 @@ describe("appendRevisionNotes", () => {
     expect(updated.revisionHistory).toHaveLength(2);
     expect(updated.revisionHistory?.[0].id).toBe(first.id);
     expect(updated.revisionHistory?.[1].id).toBe(second.id);
+  });
+});
+
+describe("getQuoteRevisionCount", () => {
+  it("returns zero when history is missing", () => {
+    expect(getQuoteRevisionCount(sampleQuote)).toBe(0);
+  });
+
+  it("returns the number of revision notes", () => {
+    const note = createValidityExtensionRevision({
+      previousValidUntil: "2026-07-04",
+      newValidUntil: "2026-07-18",
+      extensionDays: 14,
+    });
+
+    expect(
+      getQuoteRevisionCount({
+        ...sampleQuote,
+        revisionHistory: [note, note],
+      }),
+    ).toBe(2);
+  });
+});
+
+describe("formatRevisionCountLabel", () => {
+  it("returns null for zero revisions", () => {
+    expect(formatRevisionCountLabel(0)).toBeNull();
+  });
+
+  it("uses singular copy for one revision", () => {
+    expect(formatRevisionCountLabel(1)).toBe("1 revision");
+  });
+
+  it("uses plural copy for multiple revisions", () => {
+    expect(formatRevisionCountLabel(3)).toBe("3 revisions");
   });
 });
 

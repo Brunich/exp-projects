@@ -21,6 +21,7 @@ import {
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadQuotePdfButton } from "./DownloadQuotePdfButton";
 import { QuoteExpirationBadge } from "./QuoteExpirationBadge";
+import { QuoteRevisionCountBadge } from "./QuoteRevisionCountBadge";
 import { QuoteStatusBadge } from "./QuoteStatusBadge";
 import { RevisedQuoteEmailDraft } from "./RevisedQuoteEmailDraft";
 import { useBrandSettings } from "@/lib/use-brand-settings";
@@ -199,6 +200,7 @@ export function SavedQuotesList() {
                       {formatQuoteLabel(quote)}
                     </p>
                     <QuoteStatusBadge status={quote.status} />
+                    <QuoteRevisionCountBadge quote={quote} />
                     <QuoteExpirationBadge
                       status={quote.status}
                       validUntil={quote.validUntil}
