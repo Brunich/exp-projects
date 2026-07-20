@@ -8,6 +8,7 @@ import {
 } from "../lib/honeypot.js";
 import { parseLeadListQuery } from "../lib/lead-filters.js";
 import { parseLeadStatsQuery } from "../lib/lead-stats.js";
+import { buildWeeklyDigest } from "../lib/weekly-digest.js";
 import { buildLeadsCsv, leadsCsvFilename } from "../lib/csv-export.js";
 import { validateLeadInput } from "../lib/validation.js";
 import { notifyLeadWebhook } from "../lib/webhook.js";
@@ -70,6 +71,16 @@ export async function registerLeadRoutes(
       data: stats,
       meta,
     });
+  });
+
+  app.get("/leads/digest/weekly", async (request, reply) => {
+    if (!isAuthorized(request, config.apiKey)) {
+      return reply.status(401).send(unauthorizedError());
+    }
+
+    const digest = await buildWeeklyDigest(config.store);
+
+    return reply.send({ data: digest });
   });
 
   app.get("/leads", async (request, reply) => {

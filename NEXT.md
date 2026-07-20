@@ -1,5 +1,5 @@
 # Next Tasks
 
-1. Add weekly email digest endpoint for lead volume trends in `api-leads-capture`.
-2. Add revision filter to saved quotes list in `web-service-quotes`.
-3. Add today/tomorrow quick filters to `web-client-tracker` toolbar alongside overdue and due-this-week.
+1. Add revision filter to saved quotes list in `web-service-quotes`.
+2. Add today/tomorrow quick filters to `web-client-tracker` toolbar alongside overdue and due-this-week.
+3. Add digest HTML email template with inline chart in `api-leads-capture`.

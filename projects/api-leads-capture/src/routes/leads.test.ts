@@ -150,6 +150,37 @@ describe("lead routes", () => {
     expect(response.json().error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("requires API key for GET /leads/digest/weekly", async () => {
+    const unauthorized = await app.inject({
+      method: "GET",
+      url: "/leads/digest/weekly",
+    });
+    expect(unauthorized.statusCode).toBe(401);
+  });
+
+  it("returns weekly digest with week-over-week trends", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/leads/digest/weekly",
+      headers: { "x-api-key": apiKey },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.currentWeek.dailyBuckets).toHaveLength(7);
+    expect(body.data.previousWeek.dailyBuckets).toHaveLength(7);
+    expect(body.data.trends).toMatchObject({
+      totalDelta: expect.any(Number),
+      bySourceDelta: {
+        landing: expect.any(Number),
+        referral: expect.any(Number),
+        ads: expect.any(Number),
+        other: expect.any(Number),
+      },
+    });
+    expect(body.data.chart.datasets).toHaveLength(4);
+  });
+
   it("filters leads by source and search query", async () => {
     await app.inject({
       method: "POST",

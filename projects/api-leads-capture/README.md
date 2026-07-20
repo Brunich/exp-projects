@@ -12,6 +12,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - Per-IP rate limiting on `POST /leads` (10 requests/minute by default)
 - `GET /leads` — list stored leads with optional filters, pagination, and CSV export (API key required)
 - `GET /leads/stats` — lead summary totals by source, recent activity windows, and daily buckets for charts (API key required)
+- `GET /leads/digest/weekly` — week-over-week lead volume trends with chart-ready series (API key required)
 - `GET /health` — service health check
 - JSON file persistence with atomic writes (survives restarts)
 - Optional webhook delivery with HMAC signature (`x-webhook-signature`)
@@ -24,6 +25,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
 - `DELETE /webhooks/queue/dead` — purge dead-letter webhook deliveries by date/source filter (API key required)
 - `GET /cron/purge-dead-letters` — scheduled auto-purge of dead letters older than `DEAD_LETTER_RETENTION_DAYS` (CRON_SECRET bearer required)
+- `GET /cron/weekly-digest` — build weekly lead digest; optional `?send=true` emails `DIGEST_RECIPIENTS` when SMTP is configured (CRON_SECRET bearer required)
 
 ## Quick start
 
@@ -53,6 +55,12 @@ Server runs at [http://localhost:3001](http://localhost:3001).
 | `LEAD_DEDUP_MODE` | Duplicate email handling: `ignore` (default) or `upsert` |
 | `CRON_SECRET` | Bearer token for scheduled cron endpoints |
 | `DEAD_LETTER_RETENTION_DAYS` | Auto-purge dead letters older than N days (minimum `7`; unset disables cron purge) |
+| `DIGEST_RECIPIENTS` | Comma-separated emails for weekly digest (`GET /cron/weekly-digest?send=true`) |
+| `SMTP_HOST` | SMTP server host for weekly digest emails |
+| `SMTP_PORT` | SMTP port (default `587`) |
+| `SMTP_USER` | SMTP username |
+| `SMTP_PASS` | SMTP password |
+| `SMTP_FROM` | From address for digest emails |
 | `SUPABASE_URL` | Optional Supabase project URL — enables shared Postgres storage for multi-instance deploys |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (required with `SUPABASE_URL`) |
 | `SUPABASE_LEADS_TABLE` | Postgres table name for leads (default `leads`) |
@@ -206,6 +214,57 @@ Optional query parameters:
 `dailyBuckets` is oldest-first with zero-filled days so charting libraries can plot a continuous series. Each bucket includes `count` (total leads that day) and `bySource` (per-source counts for stacked area/bar charts). The window ends today and spans `bucketDays` days (default 14).
 
 When `since` is set, `meta` includes `{ "since": "2026-07-01" }` and all counts apply to that filtered set. When `bucketDays` is set explicitly, `meta` includes `{ "bucketDays": 30 }`.
+
+### `GET /leads/digest/weekly`
+
+Requires `x-api-key: <API_KEY>` or `Authorization: Bearer <API_KEY>`.
+
+Returns a week-over-week lead volume digest for dashboards or email previews. Compares the last 7 days against the prior 7 days with per-source deltas, busiest day, and a chart-ready stacked series.
+
+**Response `200`**
+
+```json
+{
+  "data": {
+    "period": { "start": "2026-07-14", "end": "2026-07-20", "label": "Jul 14 – Jul 20, 2026" },
+    "previousPeriod": { "start": "2026-07-07", "end": "2026-07-13", "label": "Jul 7 – Jul 13, 2026" },
+    "currentWeek": {
+      "total": 12,
+      "bySource": { "landing": 5, "referral": 3, "ads": 2, "other": 2 },
+      "dailyBuckets": []
+    },
+    "previousWeek": {
+      "total": 8,
+      "bySource": { "landing": 4, "referral": 2, "ads": 1, "other": 1 },
+      "dailyBuckets": []
+    },
+    "trends": {
+      "totalDelta": 4,
+      "totalPercentChange": 50,
+      "bySourceDelta": { "landing": 1, "referral": 1, "ads": 1, "other": 1 },
+      "topSource": "landing",
+      "busiestDay": { "date": "2026-07-18", "count": 4 }
+    },
+    "chart": { "labels": [], "datasets": [] }
+  }
+}
+```
+
+```bash
+curl http://localhost:3001/leads/digest/weekly \
+  -H "x-api-key: dev-api-key-change-me"
+```
+
+### `GET /cron/weekly-digest`
+
+Requires `Authorization: Bearer <CRON_SECRET>`. Optional query `send=true` delivers the digest via SMTP to `DIGEST_RECIPIENTS`.
+
+```bash
+curl "http://localhost:3001/cron/weekly-digest?send=true" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Skips gracefully when `DIGEST_RECIPIENTS` or SMTP env vars are unset (`skipped: recipients_not_configured` or `smtp_not_configured`).
 
 ### Webhook payload
 
@@ -475,4 +534,4 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
 ## Next steps
 
 - Sample Grafana/Metabase dashboard JSON using `/leads/stats` stacked chart data
-- Weekly email digest endpoint for lead volume trends
+- Digest HTML template with inline chart for richer email reports

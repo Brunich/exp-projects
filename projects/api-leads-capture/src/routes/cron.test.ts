@@ -109,4 +109,42 @@ describe("cron routes", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().data.skipped).toBe("retention_not_configured");
   });
+
+  it("requires CRON_SECRET bearer auth for GET /cron/weekly-digest", async () => {
+    const unauthorized = await app.inject({
+      method: "GET",
+      url: "/cron/weekly-digest",
+    });
+
+    expect(unauthorized.statusCode).toBe(401);
+  });
+
+  it("returns weekly digest without sending when send is not set", async () => {
+    process.env.CRON_SECRET = cronSecret;
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/cron/weekly-digest",
+      headers: { authorization: `Bearer ${cronSecret}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.digest.currentWeek).toBeDefined();
+    expect(body.data.email).toBeUndefined();
+  });
+
+  it("skips email send when recipients are not configured", async () => {
+    process.env.CRON_SECRET = cronSecret;
+    delete process.env.DIGEST_RECIPIENTS;
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/cron/weekly-digest?send=true",
+      headers: { authorization: `Bearer ${cronSecret}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.skipped).toBe("recipients_not_configured");
+  });
 });
