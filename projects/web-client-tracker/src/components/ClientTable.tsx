@@ -16,6 +16,7 @@ import {
   sortClientsByFollowUp,
 } from "@/lib/clients";
 import { ClientStatusBadge } from "./ClientStatusBadge";
+import { FollowUpUrgencyBadge } from "./FollowUpUrgencyBadge";
 
 const STATUS_OPTIONS: Array<{ value: ClientStatus | "all"; label: string }> = [
   { value: "all", label: "All statuses" },
@@ -363,7 +364,12 @@ export function ClientTable({
                       </td>
                     ) : null}
                     <td className="px-4 py-3">
-                      <p className="font-medium text-zinc-900">{client.name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-zinc-900">{client.name}</p>
+                        {!showArchived && client.status !== "closed" ? (
+                          <FollowUpUrgencyBadge followUpDate={client.nextFollowUp} />
+                        ) : null}
+                      </div>
                       <p className="text-sm text-zinc-500">{client.company}</p>
                       <p className="text-xs text-zinc-400">{client.email}</p>
                       {showArchived && client.archivedAt ? (

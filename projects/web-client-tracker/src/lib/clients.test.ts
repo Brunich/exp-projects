@@ -7,13 +7,17 @@ import {
   filterClientsByStatus,
   filterClientsOverdueOnly,
   filterClientsDueThisWeekOnly,
+  followUpUrgencyBadgeClass,
+  formatFollowUpUrgencyLabel,
   getClientsDueThisWeek,
   getClientsNeedingFollowUp,
+  getFollowUpUrgency,
   getWeekBounds,
   isArchived,
   isFollowUpDueThisWeek,
   isFollowUpOverdue,
   SAMPLE_CLIENTS,
+  shouldShowFollowUpUrgencyBadge,
   sortClientsByFollowUp,
 } from "./clients";
 
@@ -208,5 +212,70 @@ describe("getClientsDueThisWeek", () => {
     expect(getClientsDueThisWeek(withArchived, today).map((c) => c.name)).toEqual(
       ["Ana García"],
     );
+  });
+});
+
+describe("getFollowUpUrgency", () => {
+  const today = new Date(2026, 6, 3);
+
+  it("returns overdue, today, and tomorrow urgency levels", () => {
+    expect(getFollowUpUrgency("2026-07-02", today)).toBe("overdue");
+    expect(getFollowUpUrgency("2026-07-03", today)).toBe("today");
+    expect(getFollowUpUrgency("2026-07-04", today)).toBe("tomorrow");
+    expect(getFollowUpUrgency("2026-07-08", today)).toBeNull();
+  });
+});
+
+describe("formatFollowUpUrgencyLabel", () => {
+  const today = new Date(2026, 6, 3);
+
+  it("formats urgency labels for table badges", () => {
+    expect(formatFollowUpUrgencyLabel("today", "2026-07-03", today)).toBe(
+      "Due today",
+    );
+    expect(formatFollowUpUrgencyLabel("tomorrow", "2026-07-04", today)).toBe(
+      "Due tomorrow",
+    );
+    expect(formatFollowUpUrgencyLabel("overdue", "2026-07-02", today)).toBe(
+      "1d overdue",
+    );
+    expect(formatFollowUpUrgencyLabel("overdue", "2026-06-30", today)).toBe(
+      "3d overdue",
+    );
+  });
+});
+
+describe("followUpUrgencyBadgeClass", () => {
+  it("returns distinct styles per urgency level", () => {
+    expect(followUpUrgencyBadgeClass("overdue")).toContain("rose");
+    expect(followUpUrgencyBadgeClass("today")).toContain("amber");
+    expect(followUpUrgencyBadgeClass("tomorrow")).toContain("sky");
+  });
+});
+
+describe("shouldShowFollowUpUrgencyBadge", () => {
+  const today = new Date(2026, 6, 3);
+
+  it("shows badges for active clients with urgent follow-ups", () => {
+    const client = { ...SAMPLE_CLIENTS[1], nextFollowUp: "2026-07-03" };
+    expect(shouldShowFollowUpUrgencyBadge(client, { today })).toBe(true);
+  });
+
+  it("hides badges for closed, archived, or non-urgent clients", () => {
+    expect(
+      shouldShowFollowUpUrgencyBadge(
+        { ...SAMPLE_CLIENTS[0], status: "closed", nextFollowUp: "2026-07-03" },
+        { today },
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowFollowUpUrgencyBadge(
+        { ...SAMPLE_CLIENTS[0], archivedAt: "2026-07-01", nextFollowUp: "2026-07-03" },
+        { showArchived: true, today },
+      ),
+    ).toBe(false);
+    expect(
+      shouldShowFollowUpUrgencyBadge(SAMPLE_CLIENTS[2], { today }),
+    ).toBe(false);
   });
 });

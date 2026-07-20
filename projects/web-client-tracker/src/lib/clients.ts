@@ -67,6 +67,52 @@ export function daysUntilFollowUp(
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
+export type FollowUpUrgency = "overdue" | "today" | "tomorrow";
+
+export function getFollowUpUrgency(
+  followUpDate: string,
+  today: Date = new Date(),
+): FollowUpUrgency | null {
+  const days = daysUntilFollowUp(followUpDate, today);
+  if (days < 0) return "overdue";
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return null;
+}
+
+export function formatFollowUpUrgencyLabel(
+  urgency: FollowUpUrgency,
+  followUpDate: string,
+  today: Date = new Date(),
+): string {
+  if (urgency === "today") return "Due today";
+  if (urgency === "tomorrow") return "Due tomorrow";
+
+  const days = daysUntilFollowUp(followUpDate, today);
+  const overdueDays = Math.abs(days);
+  return overdueDays === 1 ? "1d overdue" : `${overdueDays}d overdue`;
+}
+
+export function followUpUrgencyBadgeClass(urgency: FollowUpUrgency): string {
+  switch (urgency) {
+    case "overdue":
+      return "bg-rose-100 text-rose-800 ring-rose-200";
+    case "today":
+      return "bg-amber-100 text-amber-900 ring-amber-200";
+    case "tomorrow":
+      return "bg-sky-100 text-sky-800 ring-sky-200";
+  }
+}
+
+export function shouldShowFollowUpUrgencyBadge(
+  client: Client,
+  options?: { showArchived?: boolean; today?: Date },
+): boolean {
+  if (options?.showArchived) return false;
+  if (client.status === "closed") return false;
+  return getFollowUpUrgency(client.nextFollowUp, options?.today) !== null;
+}
+
 export function isArchived(client: Client): boolean {
   return Boolean(client.archivedAt);
 }
