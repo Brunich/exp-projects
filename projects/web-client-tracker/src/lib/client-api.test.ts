@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { ClientApiError, fetchClients } from "./client-api";
+import {
+  ClientApiError,
+  fetchClients,
+  fetchPipelineOrder,
+  updatePipelineOrder,
+} from "./client-api";
 
 describe("ClientApiError", () => {
   it("stores status and code", () => {
@@ -52,6 +57,38 @@ describe("fetchClients", () => {
       status: 401,
       code: "UNAUTHORIZED",
     });
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("pipeline order API", () => {
+  it("fetches pipeline order", async () => {
+    const order = ["closed", "lead", "active", "negotiating", "paused"];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: order }),
+      }),
+    );
+
+    await expect(fetchPipelineOrder()).resolves.toEqual(order);
+    vi.unstubAllGlobals();
+  });
+
+  it("updates pipeline order", async () => {
+    const order = ["active", "lead", "negotiating", "paused", "closed"];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: order }),
+      }),
+    );
+
+    await expect(updatePipelineOrder(order)).resolves.toEqual(order);
     vi.unstubAllGlobals();
   });
 });

@@ -16,22 +16,15 @@ import {
   isFollowUpOverdue,
   sortClientsByFollowUp,
 } from "@/lib/clients";
+import { getStatusFilterOptions } from "@/lib/client-statuses";
 import { ClientStatusBadge } from "./ClientStatusBadge";
 import { FollowUpSnoozeMenu } from "./FollowUpSnoozeMenu";
 import { FollowUpUrgencyBadge } from "./FollowUpUrgencyBadge";
 import type { SnoozeDays } from "@/lib/clients";
 
-const STATUS_OPTIONS: Array<{ value: ClientStatus | "all"; label: string }> = [
-  { value: "all", label: "All statuses" },
-  { value: "lead", label: "Lead" },
-  { value: "active", label: "Active" },
-  { value: "negotiating", label: "Negotiating" },
-  { value: "paused", label: "Paused" },
-  { value: "closed", label: "Closed" },
-];
-
 interface ClientTableProps {
   clients: Client[];
+  pipelineOrder?: ClientStatus[];
   showArchived?: boolean;
   disabled?: boolean;
   shortcutsDisabled?: boolean;
@@ -58,6 +51,7 @@ function formatFollowUpLabel(date: string): string {
 
 export function ClientTable({
   clients,
+  pipelineOrder,
   showArchived = false,
   disabled = false,
   shortcutsDisabled = false,
@@ -73,6 +67,7 @@ export function ClientTable({
   onDelete,
   onSnooze,
 }: ClientTableProps) {
+  const statusOptions = getStatusFilterOptions(pipelineOrder);
   const [internalFilters, setInternalFilters] =
     useState<ClientListFilterState>(DEFAULT_CLIENT_LIST_FILTERS);
   const filters = controlledFilters ?? internalFilters;
@@ -316,7 +311,7 @@ export function ClientTable({
               }
               className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >
-              {STATUS_OPTIONS.map((option) => (
+              {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

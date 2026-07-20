@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Client } from "./types";
+import type { Client, ClientStatus } from "./types";
 import type { ClientFormInput } from "./client-validation";
 import type { SnoozeDays } from "./clients";
 import {
@@ -11,21 +11,31 @@ import {
   createClient,
   deleteClientById,
   fetchClients,
+  fetchPipelineOrder,
   restoreClientById,
   snoozeClientById,
   updateClient,
+  updatePipelineOrder,
 } from "./client-api";
+import { DEFAULT_PIPELINE_ORDER } from "./client-statuses";
 
 export function useClientStorage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [pipelineOrder, setPipelineOrder] = useState<ClientStatus[]>([
+    ...DEFAULT_PIPELINE_ORDER,
+  ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const data = await fetchClients();
+      const [data, order] = await Promise.all([
+        fetchClients(),
+        fetchPipelineOrder(),
+      ]);
       setClients(data);
+      setPipelineOrder(order);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load clients");
@@ -37,10 +47,11 @@ export function useClientStorage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchClients()
-      .then((data) => {
+    Promise.all([fetchClients(), fetchPipelineOrder()])
+      .then(([data, order]) => {
         if (!cancelled) {
           setClients(data);
+          setPipelineOrder(order);
           setError(null);
         }
       })
@@ -176,8 +187,28 @@ export function useClientStorage() {
     [runMutation],
   );
 
+  const reorderPipeline = useCallback(
+    async (order: ClientStatus[]) => {
+      const previous = pipelineOrder;
+      setPipelineOrder(order);
+
+      try {
+        const saved = await updatePipelineOrder(order);
+        setPipelineOrder(saved);
+        setError(null);
+      } catch (err) {
+        setPipelineOrder(previous);
+        setError(
+          err instanceof Error ? err.message : "Failed to save pipeline order",
+        );
+      }
+    },
+    [pipelineOrder],
+  );
+
   return {
     clients,
+    pipelineOrder,
     loading,
     error,
     mutating,
@@ -190,5 +221,6 @@ export function useClientStorage() {
     restoreClientsBulk,
     snoozeClient,
     removeClient,
+    reorderPipeline,
   };
 }

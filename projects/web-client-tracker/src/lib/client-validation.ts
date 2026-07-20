@@ -1,3 +1,4 @@
+import { DEFAULT_PIPELINE_ORDER } from "./client-statuses";
 import type { ClientStatus } from "./types";
 
 export interface ClientFormInput {
@@ -13,13 +14,7 @@ export type ClientFormField = keyof ClientFormInput;
 
 export type ClientFormErrors = Partial<Record<ClientFormField, string>>;
 
-const CLIENT_STATUSES: ClientStatus[] = [
-  "lead",
-  "active",
-  "negotiating",
-  "paused",
-  "closed",
-];
+const CLIENT_STATUSES: ClientStatus[] = [...DEFAULT_PIPELINE_ORDER];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

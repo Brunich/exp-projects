@@ -6,7 +6,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 
 - Demo auth stub with cookie session
 - Protected `/clients` dashboard
-- Dashboard stats panel with active total, overdue follow-up count, due-this-week count, and pipeline status breakdown; click overdue or due-this-week cards to filter the table
+- Dashboard stats panel with active total, overdue follow-up count, due-this-week count, and pipeline status breakdown; drag pipeline stages to reorder them (saved to `data/settings.json`); click overdue or due-this-week cards to filter the table
 - REST API (`/api/clients`) with JSON file persistence
 - Client table with status badges and follow-up urgency labels
 - Follow-up urgency badges on table rows (today, tomorrow, overdue)
@@ -58,16 +58,18 @@ Open [http://localhost:3000](http://localhost:3000).
 src/
   app/
     api/clients/   # CRUD API routes (session-protected)
+    api/settings/  # App settings (pipeline order)
     clients/       # Protected client list
     login/         # Auth stub login page
     api/auth/      # Login/logout route handlers
   components/      # UI components
   lib/
-    server/        # File-backed ClientStore
+    server/        # File-backed ClientStore and SettingsStore
 docs/
   api-contract.md  # API reference (implemented by /api/clients)
 data/
   clients.json     # Local persistence (gitignored, auto-created)
+  settings.json    # Pipeline order and app settings (gitignored)
 ```
 
 ## Environment
@@ -76,6 +78,7 @@ data/
 | --------------------- | ------------------------------------------------ |
 | `NEXT_PUBLIC_APP_URL` | Public app URL for redirects                     |
 | `CLIENTS_FILE`        | Path to JSON client store (default `data/clients.json`) |
+| `SETTINGS_FILE`       | Path to JSON settings store (default `data/settings.json`) |
 | `SMTP_HOST`           | SMTP host for server-sent reminders (optional)          |
 | `SMTP_PORT`           | SMTP port (default `587`)                               |
 | `SMTP_USER`           | SMTP username                                           |

@@ -249,6 +249,32 @@ Omit `ids` to send to all overdue clients. Successful sends update `lastReminder
 
 **Response `503`** when SMTP is not configured (includes draft payloads in `data.drafts`).
 
+### `GET /settings/pipeline-order`
+
+Returns the saved pipeline stage order used by the dashboard breakdown, status filter, and client form.
+
+**Response `200`**
+
+```json
+{
+  "data": ["lead", "active", "negotiating", "paused", "closed"]
+}
+```
+
+### `PATCH /settings/pipeline-order`
+
+Updates the pipeline stage order. Unknown or duplicate statuses are ignored; missing statuses are appended.
+
+**Request body**
+
+```json
+{
+  "pipelineOrder": ["active", "lead", "negotiating", "paused", "closed"]
+}
+```
+
+**Response `200`**: `{ "data": [ ...normalized order ] }`
+
 ## Validation rules
 
 - `status` must be one of the enum values used in `src/lib/types.ts`.
@@ -258,6 +284,8 @@ Omit `ids` to send to all overdue clients. Successful sends update `lastReminder
 ## Persistence
 
 Clients are stored in a JSON file on disk (`CLIENTS_FILE`, default `data/clients.json`). The file is created with sample data on first run.
+
+Pipeline stage order is stored separately in `SETTINGS_FILE` (default `data/settings.json`).
 
 ## Webhook (future)
 

@@ -8,20 +8,14 @@ import {
   type ClientFormErrors,
   type ClientFormInput,
 } from "@/lib/client-validation";
-
-const STATUS_OPTIONS: Array<{ value: ClientStatus; label: string }> = [
-  { value: "lead", label: "Lead" },
-  { value: "active", label: "Active" },
-  { value: "negotiating", label: "Negotiating" },
-  { value: "paused", label: "Paused" },
-  { value: "closed", label: "Closed" },
-];
+import { getStatusSelectOptions } from "@/lib/client-statuses";
 
 const inputClassName =
   "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
 
 interface ClientFormProps {
   mode: "create" | "edit";
+  pipelineOrder: ClientStatus[];
   initialValues?: Client;
   onSubmit: (input: ClientFormInput) => void | Promise<void>;
   onCancel: () => void;
@@ -40,10 +34,12 @@ function toFormInput(client?: Client): ClientFormInput {
 
 export function ClientForm({
   mode,
+  pipelineOrder,
   initialValues,
   onSubmit,
   onCancel,
 }: ClientFormProps) {
+  const statusOptions = getStatusSelectOptions(pipelineOrder);
   const [values, setValues] = useState<ClientFormInput>(
     toFormInput(initialValues),
   );
@@ -136,7 +132,7 @@ export function ClientForm({
             }
             className={inputClassName}
           >
-            {STATUS_OPTIONS.map((option) => (
+            {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

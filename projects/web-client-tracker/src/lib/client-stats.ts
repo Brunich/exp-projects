@@ -1,17 +1,10 @@
+import { DEFAULT_PIPELINE_ORDER } from "./client-statuses";
 import {
   filterActiveClients,
   getClientsDueThisWeek,
   getClientsNeedingFollowUp,
 } from "./clients";
 import type { Client, ClientStatus } from "./types";
-
-const PIPELINE_STATUSES: ClientStatus[] = [
-  "lead",
-  "active",
-  "negotiating",
-  "paused",
-  "closed",
-];
 
 export interface ClientDashboardStats {
   activeTotal: number;
@@ -49,6 +42,8 @@ export function computeClientDashboardStats(
   };
 }
 
-export function getPipelineStatuses(): ClientStatus[] {
-  return [...PIPELINE_STATUSES];
+export function getPipelineStatuses(
+  pipelineOrder: ClientStatus[] = DEFAULT_PIPELINE_ORDER,
+): ClientStatus[] {
+  return [...pipelineOrder];
 }

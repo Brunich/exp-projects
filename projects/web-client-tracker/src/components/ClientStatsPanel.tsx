@@ -1,34 +1,26 @@
-import {
-  computeClientDashboardStats,
-  getPipelineStatuses,
-} from "@/lib/client-stats";
+import { computeClientDashboardStats } from "@/lib/client-stats";
 import type { ClientListFilterState } from "@/lib/client-filter-shortcuts";
-import type { Client } from "@/lib/types";
-import { ClientStatusBadge } from "./ClientStatusBadge";
-
-const STATUS_LABELS: Record<
-  ReturnType<typeof getPipelineStatuses>[number],
-  string
-> = {
-  lead: "Lead",
-  active: "Active",
-  negotiating: "Negotiating",
-  paused: "Paused",
-  closed: "Closed",
-};
+import type { Client, ClientStatus } from "@/lib/types";
+import { PipelineStatusList } from "./PipelineStatusList";
 
 interface ClientStatsPanelProps {
   clients: Client[];
+  pipelineOrder: ClientStatus[];
   filters: ClientListFilterState;
+  disabled?: boolean;
   onToggleOverdueFilter: () => void;
   onToggleDueThisWeekFilter: () => void;
+  onPipelineReorder: (order: ClientStatus[]) => void;
 }
 
 export function ClientStatsPanel({
   clients,
+  pipelineOrder,
   filters,
+  disabled,
   onToggleOverdueFilter,
   onToggleDueThisWeekFilter,
+  onPipelineReorder,
 }: ClientStatsPanelProps) {
   const stats = computeClientDashboardStats(clients);
 
@@ -112,23 +104,18 @@ export function ClientStatsPanel({
       </div>
 
       <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Pipeline breakdown
-        </p>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {getPipelineStatuses().map((status) => (
-            <li
-              key={status}
-              className="inline-flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-2.5 py-1.5"
-            >
-              <ClientStatusBadge status={status} />
-              <span className="text-sm font-semibold text-zinc-800">
-                {stats.byStatus[status]}
-              </span>
-              <span className="sr-only">{STATUS_LABELS[status]}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Pipeline breakdown
+          </p>
+          <p className="text-xs text-zinc-400">Drag to reorder stages</p>
+        </div>
+        <PipelineStatusList
+          order={pipelineOrder}
+          counts={stats.byStatus}
+          disabled={disabled}
+          onReorder={onPipelineReorder}
+        />
       </article>
     </section>
   );

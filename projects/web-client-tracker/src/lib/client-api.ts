@@ -1,4 +1,4 @@
-import type { Client, ClientActivity } from "./types";
+import type { Client, ClientActivity, ClientStatus } from "./types";
 import type { ClientFormInput } from "./client-validation";
 import type { SnoozeDays } from "./clients";
 
@@ -47,6 +47,24 @@ async function parseResponse<T>(response: Response): Promise<T> {
 export async function fetchClients(): Promise<Client[]> {
   const response = await fetch("/api/clients", { cache: "no-store" });
   return parseResponse<Client[]>(response);
+}
+
+export async function fetchPipelineOrder(): Promise<ClientStatus[]> {
+  const response = await fetch("/api/settings/pipeline-order", {
+    cache: "no-store",
+  });
+  return parseResponse<ClientStatus[]>(response);
+}
+
+export async function updatePipelineOrder(
+  pipelineOrder: ClientStatus[],
+): Promise<ClientStatus[]> {
+  const response = await fetch("/api/settings/pipeline-order", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pipelineOrder }),
+  });
+  return parseResponse<ClientStatus[]>(response);
 }
 
 export async function createClient(input: ClientFormInput): Promise<Client> {

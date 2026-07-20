@@ -34,6 +34,7 @@ type PendingAction =
 export function ClientsDashboard() {
   const {
     clients,
+    pipelineOrder,
     loading,
     error,
     mutating,
@@ -45,6 +46,7 @@ export function ClientsDashboard() {
     restoreClientsBulk,
     removeClient,
     snoozeClient,
+    reorderPipeline,
     refresh,
   } = useClientStorage();
   const [formMode, setFormMode] = useState<FormMode>(null);
@@ -211,9 +213,12 @@ export function ClientsDashboard() {
       {!showArchived ? (
         <ClientStatsPanel
           clients={clients}
+          pipelineOrder={pipelineOrder}
           filters={listFilters}
+          disabled={mutating}
           onToggleOverdueFilter={toggleOverdueFilter}
           onToggleDueThisWeekFilter={toggleDueThisWeekFilter}
+          onPipelineReorder={reorderPipeline}
         />
       ) : null}
 
@@ -312,6 +317,7 @@ export function ClientsDashboard() {
       ) : (
         <ClientTable
           clients={activeClients}
+          pipelineOrder={pipelineOrder}
           selectable
           selectedIds={selectedIds}
           filters={listFilters}
@@ -341,6 +347,7 @@ export function ClientsDashboard() {
           >
             <ClientForm
               mode={formMode}
+              pipelineOrder={pipelineOrder}
               initialValues={editingClient ?? undefined}
               onSubmit={handleSubmit}
               onCancel={closeForm}
