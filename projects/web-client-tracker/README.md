@@ -16,7 +16,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - Slack or generic webhook notifications for overdue follow-up digests
 - Daily cron job to auto-send overdue reminders when SMTP is configured
 - Status filter (lead, active, negotiating, paused, closed)
-- Search by client name or company with overdue-only and due-this-week quick filters
+- Search by client name or company with overdue-only, due-this-week, due-today, and due-tomorrow quick filters
 - Keyboard shortcuts: `/` or `Ctrl+K` to focus search, `Esc` to clear or reset filters, `N` to add a client, `T` to open the activity timeline for the first visible row
 - Add and edit clients with form validation
 - Archive clients with restore and permanent delete

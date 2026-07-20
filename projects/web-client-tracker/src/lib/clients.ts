@@ -166,11 +166,49 @@ export function filterClientsDueThisWeekOnly(
   );
 }
 
+export function isFollowUpDueToday(
+  followUpDate: string,
+  today: Date = new Date(),
+): boolean {
+  return daysUntilFollowUp(followUpDate, today) === 0;
+}
+
+export function isFollowUpDueTomorrow(
+  followUpDate: string,
+  today: Date = new Date(),
+): boolean {
+  return daysUntilFollowUp(followUpDate, today) === 1;
+}
+
+export function filterClientsDueTodayOnly(
+  clients: Client[],
+  today: Date = new Date(),
+): Client[] {
+  return clients.filter(
+    (client) =>
+      client.status !== "closed" &&
+      isFollowUpDueToday(client.nextFollowUp, today),
+  );
+}
+
+export function filterClientsDueTomorrowOnly(
+  clients: Client[],
+  today: Date = new Date(),
+): Client[] {
+  return clients.filter(
+    (client) =>
+      client.status !== "closed" &&
+      isFollowUpDueTomorrow(client.nextFollowUp, today),
+  );
+}
+
 export interface ClientListFilters {
   query?: string;
   status?: ClientStatus | "all";
   overdueOnly?: boolean;
   dueThisWeekOnly?: boolean;
+  todayOnly?: boolean;
+  tomorrowOnly?: boolean;
   today?: Date;
 }
 
@@ -194,6 +232,14 @@ export function filterClients(
 
   if (filters.dueThisWeekOnly) {
     result = filterClientsDueThisWeekOnly(result, filters.today);
+  }
+
+  if (filters.todayOnly) {
+    result = filterClientsDueTodayOnly(result, filters.today);
+  }
+
+  if (filters.tomorrowOnly) {
+    result = filterClientsDueTomorrowOnly(result, filters.today);
   }
 
   return result;

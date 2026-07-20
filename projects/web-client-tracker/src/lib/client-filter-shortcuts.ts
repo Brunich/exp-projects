@@ -5,6 +5,8 @@ export type ClientListFilterState = {
   statusFilter: ClientStatus | "all";
   overdueOnly: boolean;
   dueThisWeekOnly: boolean;
+  todayOnly: boolean;
+  tomorrowOnly: boolean;
 };
 
 export const DEFAULT_CLIENT_LIST_FILTERS: ClientListFilterState = {
@@ -12,7 +14,30 @@ export const DEFAULT_CLIENT_LIST_FILTERS: ClientListFilterState = {
   statusFilter: "all",
   overdueOnly: false,
   dueThisWeekOnly: false,
+  todayOnly: false,
+  tomorrowOnly: false,
 };
+
+export type FollowUpQuickFilterKey =
+  | "overdueOnly"
+  | "dueThisWeekOnly"
+  | "todayOnly"
+  | "tomorrowOnly";
+
+export function toggleFollowUpQuickFilter(
+  filters: ClientListFilterState,
+  key: FollowUpQuickFilterKey,
+): ClientListFilterState {
+  const nextValue = !filters[key];
+  return {
+    ...filters,
+    overdueOnly: false,
+    dueThisWeekOnly: false,
+    todayOnly: false,
+    tomorrowOnly: false,
+    [key]: nextValue,
+  };
+}
 
 export function hasActiveClientFilters(
   filters: ClientListFilterState,
@@ -21,7 +46,9 @@ export function hasActiveClientFilters(
     filters.searchQuery.trim().length > 0 ||
     filters.statusFilter !== "all" ||
     filters.overdueOnly ||
-    filters.dueThisWeekOnly
+    filters.dueThisWeekOnly ||
+    filters.todayOnly ||
+    filters.tomorrowOnly
   );
 }
 

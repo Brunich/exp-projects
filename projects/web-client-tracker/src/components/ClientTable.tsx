@@ -7,6 +7,7 @@ import {
   resolveEscapeFilterAction,
   shouldHandleFocusSearch,
   shouldHandleViewActivity,
+  toggleFollowUpQuickFilter,
   type ClientListFilterState,
 } from "@/lib/client-filter-shortcuts";
 import {
@@ -91,19 +92,19 @@ export function ClientTable({
   }
 
   function toggleOverdueOnly() {
-    updateFilters({
-      ...filters,
-      overdueOnly: !filters.overdueOnly,
-      dueThisWeekOnly: false,
-    });
+    updateFilters(toggleFollowUpQuickFilter(filters, "overdueOnly"));
   }
 
   function toggleDueThisWeekOnly() {
-    updateFilters({
-      ...filters,
-      dueThisWeekOnly: !filters.dueThisWeekOnly,
-      overdueOnly: false,
-    });
+    updateFilters(toggleFollowUpQuickFilter(filters, "dueThisWeekOnly"));
+  }
+
+  function toggleTodayOnly() {
+    updateFilters(toggleFollowUpQuickFilter(filters, "todayOnly"));
+  }
+
+  function toggleTomorrowOnly() {
+    updateFilters(toggleFollowUpQuickFilter(filters, "tomorrowOnly"));
   }
 
   const visibleClients = sortClientsByFollowUp(
@@ -112,6 +113,8 @@ export function ClientTable({
       status: filters.statusFilter,
       overdueOnly: !showArchived && filters.overdueOnly,
       dueThisWeekOnly: !showArchived && filters.dueThisWeekOnly,
+      todayOnly: !showArchived && filters.todayOnly,
+      tomorrowOnly: !showArchived && filters.tomorrowOnly,
     }),
   );
 
@@ -270,6 +273,28 @@ export function ClientTable({
                 }`}
               >
                 Due this week
+              </button>
+              <button
+                type="button"
+                onClick={toggleTodayOnly}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  filters.todayOnly
+                    ? "bg-amber-100 text-amber-900"
+                    : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Due today
+              </button>
+              <button
+                type="button"
+                onClick={toggleTomorrowOnly}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  filters.tomorrowOnly
+                    ? "bg-sky-100 text-sky-800"
+                    : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Due tomorrow
               </button>
             </div>
           ) : null}

@@ -12,6 +12,7 @@ import {
 import {
   DEFAULT_CLIENT_LIST_FILTERS,
   shouldHandleAddClient,
+  toggleFollowUpQuickFilter,
   type ClientListFilterState,
 } from "@/lib/client-filter-shortcuts";
 import { useClientStorage } from "@/lib/use-client-storage";
@@ -157,19 +158,15 @@ export function ClientsDashboard() {
   }
 
   function toggleOverdueFilter() {
-    setListFilters((current) => ({
-      ...current,
-      overdueOnly: !current.overdueOnly,
-      dueThisWeekOnly: false,
-    }));
+    setListFilters((current) =>
+      toggleFollowUpQuickFilter(current, "overdueOnly"),
+    );
   }
 
   function toggleDueThisWeekFilter() {
-    setListFilters((current) => ({
-      ...current,
-      dueThisWeekOnly: !current.dueThisWeekOnly,
-      overdueOnly: false,
-    }));
+    setListFilters((current) =>
+      toggleFollowUpQuickFilter(current, "dueThisWeekOnly"),
+    );
   }
 
   if (loading) {

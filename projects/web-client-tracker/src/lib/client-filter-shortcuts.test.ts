@@ -11,6 +11,7 @@ import {
   shouldHandleAddClient,
   shouldHandleFocusSearch,
   shouldHandleViewActivity,
+  toggleFollowUpQuickFilter,
 } from "./client-filter-shortcuts";
 
 describe("hasActiveClientFilters", () => {
@@ -43,6 +44,48 @@ describe("hasActiveClientFilters", () => {
         dueThisWeekOnly: true,
       }),
     ).toBe(true);
+    expect(
+      hasActiveClientFilters({
+        ...DEFAULT_CLIENT_LIST_FILTERS,
+        todayOnly: true,
+      }),
+    ).toBe(true);
+    expect(
+      hasActiveClientFilters({
+        ...DEFAULT_CLIENT_LIST_FILTERS,
+        tomorrowOnly: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("toggleFollowUpQuickFilter", () => {
+  it("activates one follow-up filter and clears the others", () => {
+    expect(
+      toggleFollowUpQuickFilter(
+        {
+          ...DEFAULT_CLIENT_LIST_FILTERS,
+          overdueOnly: true,
+        },
+        "todayOnly",
+      ),
+    ).toEqual({
+      ...DEFAULT_CLIENT_LIST_FILTERS,
+      overdueOnly: false,
+      todayOnly: true,
+    });
+  });
+
+  it("deactivates the selected filter when toggled again", () => {
+    expect(
+      toggleFollowUpQuickFilter(
+        {
+          ...DEFAULT_CLIENT_LIST_FILTERS,
+          tomorrowOnly: true,
+        },
+        "tomorrowOnly",
+      ),
+    ).toEqual(DEFAULT_CLIENT_LIST_FILTERS);
   });
 });
 
@@ -238,6 +281,8 @@ describe("resolveEscapeFilterAction", () => {
           statusFilter: "lead",
           overdueOnly: true,
           dueThisWeekOnly: false,
+          todayOnly: false,
+          tomorrowOnly: false,
         },
         true,
       ),
@@ -252,6 +297,8 @@ describe("resolveEscapeFilterAction", () => {
           statusFilter: "active",
           overdueOnly: false,
           dueThisWeekOnly: false,
+          todayOnly: false,
+          tomorrowOnly: false,
         },
         false,
       ),

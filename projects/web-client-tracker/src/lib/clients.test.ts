@@ -7,6 +7,10 @@ import {
   filterClientsByStatus,
   filterClientsOverdueOnly,
   filterClientsDueThisWeekOnly,
+  filterClientsDueTodayOnly,
+  filterClientsDueTomorrowOnly,
+  isFollowUpDueToday,
+  isFollowUpDueTomorrow,
   followUpUrgencyBadgeClass,
   formatFollowUpUrgencyLabel,
   getClientsDueThisWeek,
@@ -114,6 +118,38 @@ describe("filterClientsDueThisWeekOnly", () => {
   });
 });
 
+describe("isFollowUpDueToday", () => {
+  it("matches same-day follow-ups", () => {
+    const today = new Date(2026, 6, 5);
+    expect(isFollowUpDueToday("2026-07-05", today)).toBe(true);
+    expect(isFollowUpDueToday("2026-07-06", today)).toBe(false);
+  });
+});
+
+describe("isFollowUpDueTomorrow", () => {
+  it("matches next-day follow-ups", () => {
+    const today = new Date(2026, 6, 7);
+    expect(isFollowUpDueTomorrow("2026-07-08", today)).toBe(true);
+    expect(isFollowUpDueTomorrow("2026-07-07", today)).toBe(false);
+  });
+});
+
+describe("filterClientsDueTodayOnly", () => {
+  it("returns non-closed clients with follow-ups due today", () => {
+    const today = new Date(2026, 6, 5);
+    const dueToday = filterClientsDueTodayOnly(SAMPLE_CLIENTS, today);
+    expect(dueToday.map((client) => client.name)).toEqual(["Ana García"]);
+  });
+});
+
+describe("filterClientsDueTomorrowOnly", () => {
+  it("returns non-closed clients with follow-ups due tomorrow", () => {
+    const today = new Date(2026, 6, 7);
+    const dueTomorrow = filterClientsDueTomorrowOnly(SAMPLE_CLIENTS, today);
+    expect(dueTomorrow.map((client) => client.name)).toEqual(["Sofia Chen"]);
+  });
+});
+
 describe("filterClients", () => {
   it("combines search, status, and overdue filters", () => {
     const today = new Date(2026, 6, 3);
@@ -139,6 +175,26 @@ describe("filterClients", () => {
       "Ana García",
       "Marco Ruiz",
     ]);
+  });
+
+  it("filters by due-today when enabled", () => {
+    const today = new Date(2026, 6, 5);
+    const filtered = filterClients(SAMPLE_CLIENTS, {
+      todayOnly: true,
+      today,
+    });
+
+    expect(filtered.map((client) => client.name)).toEqual(["Ana García"]);
+  });
+
+  it("filters by due-tomorrow when enabled", () => {
+    const today = new Date(2026, 6, 7);
+    const filtered = filterClients(SAMPLE_CLIENTS, {
+      tomorrowOnly: true,
+      today,
+    });
+
+    expect(filtered.map((client) => client.name)).toEqual(["Sofia Chen"]);
   });
 });
 
