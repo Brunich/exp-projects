@@ -4,6 +4,7 @@ import {
   buildWeeklyDigest,
   type WeeklyDigest,
 } from "./weekly-digest.js";
+import { buildDigestEmailHtml } from "./weekly-digest-email-html.js";
 import { parseDigestRecipients, sendEmails } from "./email-sender.js";
 import type { LeadStore } from "./lead-store.js";
 
@@ -47,8 +48,9 @@ export async function runWeeklyDigestCron(
 
   const subject = buildDigestEmailSubject(digest);
   const text = buildDigestEmailBody(digest);
+  const html = buildDigestEmailHtml(digest);
   const results = await sendEmails(
-    recipients.map((to) => ({ to, subject, text })),
+    recipients.map((to) => ({ to, subject, text, html })),
   );
 
   if (results.every((result) => !result.sent)) {

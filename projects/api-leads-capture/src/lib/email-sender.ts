@@ -10,6 +10,7 @@ export interface SendEmailInput {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }
 
 export interface SendEmailResult {
@@ -80,6 +81,7 @@ export async function sendEmails(
         to: message.to,
         subject: message.subject,
         text: message.text,
+        ...(message.html ? { html: message.html } : {}),
       });
 
       results.push({ to: message.to, sent: true });

@@ -25,7 +25,7 @@ Built for landing pages and small marketing teams that need a lightweight lead i
 - `POST /webhooks/queue/replay-dead` — replay all dead-letter webhook deliveries (API key required)
 - `DELETE /webhooks/queue/dead` — purge dead-letter webhook deliveries by date/source filter (API key required)
 - `GET /cron/purge-dead-letters` — scheduled auto-purge of dead letters older than `DEAD_LETTER_RETENTION_DAYS` (CRON_SECRET bearer required)
-- `GET /cron/weekly-digest` — build weekly lead digest; optional `?send=true` emails `DIGEST_RECIPIENTS` when SMTP is configured (CRON_SECRET bearer required)
+- `GET /cron/weekly-digest` — build weekly lead digest; optional `?send=true` emails `DIGEST_RECIPIENTS` as multipart HTML (inline SVG chart) + plain text when SMTP is configured (CRON_SECRET bearer required)
 
 ## Quick start
 
@@ -258,6 +258,11 @@ curl http://localhost:3001/leads/digest/weekly \
 ### `GET /cron/weekly-digest`
 
 Requires `Authorization: Bearer <CRON_SECRET>`. Optional query `send=true` delivers the digest via SMTP to `DIGEST_RECIPIENTS`.
+
+When `send=true` and SMTP is configured, recipients get a multipart email with:
+
+- **HTML** — table layout with week-over-week summary cards, per-source breakdown, and an inline SVG stacked bar chart (daily volume by source)
+- **Plain text** — same stats without formatting (fallback for clients that strip HTML)
 
 ```bash
 curl "http://localhost:3001/cron/weekly-digest?send=true" \

@@ -1,5 +1,5 @@
 # Next Tasks
 
-1. Add revision filter to saved quotes list in `web-service-quotes`.
-2. Add due-today and due-tomorrow stat cards to `web-client-tracker` dashboard (clickable like overdue/due-this-week).
-3. Add digest HTML email template with inline chart in `api-leads-capture`.
+1. Add `GET /leads/digest/weekly/preview` HTML preview endpoint in `api-leads-capture` for digest email QA.
+2. Add client status pipeline drag-and-drop reorder in `web-client-tracker`.
+3. Add quote total range filter to saved quotes list in `web-service-quotes`.
