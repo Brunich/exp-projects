@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lead volume — stacked chart demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, sans-serif;
+        line-height: 1.5;
+      }
+
+      body {
+        margin: 0 auto;
+        max-width: 960px;
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.35rem;
+        margin: 0 0 0.25rem;
+      }
+
+      p {
+        margin: 0 0 1rem;
+        color: #64748b;
+      }
+
+      fieldset {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+      }
+
+      legend {
+        font-weight: 600;
+        padding: 0 0.25rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        max-width: 28rem;
+        padding: 0.4rem 0.5rem;
+        border: 1px solid #94a3b8;
+        border-radius: 6px;
+        font: inherit;
+      }
+
+      button {
+        font: inherit;
+        padding: 0.45rem 0.9rem;
+        border: none;
+        border-radius: 6px;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #1d4ed8;
+      }
+
+      button.secondary {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+
+      button.secondary:hover {
+        background: #cbd5e1;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .chart-wrap {
+        position: relative;
+        height: 360px;
+        margin-top: 1rem;
+      }
+
+      .status {
+        margin-top: 0.75rem;
+        font-size: 0.9rem;
+      }
+
+      .status.error {
+        color: #dc2626;
+      }
+
+      .status.ok {
+        color: #16a34a;
+      }
+
+      code {
+        font-size: 0.85em;
+        background: #f1f5f9;
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Daily leads by source</h1>
+    <p>
+      Sample stacked bar chart consuming <code>GET /leads/stats</code>
+      <code>dailyBuckets.bySource</code>. See
+      <a href="./stacked-chart.md">stacked-chart.md</a> for integration notes.
+    </p>
+
+    <fieldset>
+      <legend>Data source</legend>
+      <label>
+        API base URL (leave empty for sample data)
+        <input id="apiBase" type="text" placeholder="http://localhost:3001" />
+      </label>
+      <label>
+        API key
+        <input id="apiKey" type="password" placeholder="x-api-key value" />
+      </label>
+      <div class="actions">
+        <button type="button" id="loadLive">Load from API</button>
+        <button type="button" class="secondary" id="loadSample">
+          Use sample data
+        </button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </fieldset>
+
+    <div class="chart-wrap">
+      <canvas id="chart" aria-label="Stacked bar chart of daily leads by source"></canvas>
+    </div>
+
+    <script>
+      const SOURCE_ORDER = ["landing", "referral", "ads", "other"];
+      const SOURCE_LABELS = {
+        landing: "Landing",
+        referral: "Referral",
+        ads: "Ads",
+        other: "Other",
+      };
+      const SOURCE_COLORS = {
+        landing: "#3b82f6",
+        referral: "#22c55e",
+        ads: "#f59e0b",
+        other: "#94a3b8",
+      };
+
+      const SAMPLE_STATS = {
+        data: {
+          total: 18,
+          bySource: { landing: 8, referral: 5, ads: 3, other: 2 },
+          recent: { today: 2, last7Days: 12, last30Days: 18 },
+          dailyBuckets: [
+            {
+              date: "2026-07-01",
+              count: 1,
+              bySource: { landing: 1, referral: 0, ads: 0, other: 0 },
+            },
+            {
+              date: "2026-07-02",
+              count: 2,
+              bySource: { landing: 1, referral: 1, ads: 0, other: 0 },
+            },
+            {
+              date: "2026-07-03",
+              count: 0,
+              bySource: { landing: 0, referral: 0, ads: 0, other: 0 },
+            },
+            {
+              date: "2026-07-04",
+              count: 3,
+              bySource: { landing: 1, referral: 0, ads: 1, other: 1 },
+            },
+            {
+              date: "2026-07-05",
+              count: 2,
+              bySource: { landing: 0, referral: 2, ads: 0, other: 0 },
+            },
+            {
+              date: "2026-07-06",
+              count: 4,
+              bySource: { landing: 2, referral: 1, ads: 1, other: 0 },
+            },
+            {
+              date: "2026-07-07",
+              count: 6,
+              bySource: { landing: 3, referral: 1, ads: 0, other: 2 },
+            },
+          ],
+        },
+      };
+
+      function formatDateLabel(isoDate) {
+        const [year, month, day] = isoDate.split("-").map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      }
+
+      /** Mirrors src/lib/lead-chart-series.ts toStackedChartSeries */
+      function toStackedChartSeries(buckets) {
+        return {
+          labels: buckets.map((bucket) => formatDateLabel(bucket.date)),
+          datasets: SOURCE_ORDER.map((source) => ({
+            label: SOURCE_LABELS[source],
+            data: buckets.map((bucket) => bucket.bySource[source]),
+            backgroundColor: SOURCE_COLORS[source],
+            borderRadius: 4,
+            stack: "leads",
+          })),
+        };
+      }
+
+      let chart;
+
+      function setStatus(message, type) {
+        const el = document.getElementById("status");
+        el.textContent = message;
+        el.className = "status" + (type ? " " + type : "");
+      }
+
+      function renderChart(statsPayload) {
+        const buckets = statsPayload.data.dailyBuckets;
+        const series = toStackedChartSeries(buckets);
+        const canvas = document.getElementById("chart");
+
+        if (chart) {
+          chart.destroy();
+        }
+
+        chart = new Chart(canvas, {
+          type: "bar",
+          data: series,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  footer(items) {
+                    const total = items.reduce(
+                      (sum, item) => sum + (item.parsed.y || 0),
+                      0,
+                    );
+                    return "Total: " + total;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                stacked: true,
+                title: { display: true, text: "Date" },
+              },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                title: { display: true, text: "Leads" },
+              },
+            },
+          },
+        });
+
+        const total = statsPayload.data.total;
+        setStatus(
+          "Showing " +
+            buckets.length +
+            " days (" +
+            total +
+            " leads in window).",
+          "ok",
+        );
+      }
+
+      async function loadFromApi() {
+        const base = document.getElementById("apiBase").value.trim();
+        const apiKey = document.getElementById("apiKey").value.trim();
+
+        if (!base) {
+          setStatus("Enter an API base URL or use sample data.", "error");
+          return;
+        }
+        if (!apiKey) {
+          setStatus("API key is required for GET /leads/stats.", "error");
+          return;
+        }
+
+        setStatus("Loading…");
+
+        try {
+          const url = new URL("/leads/stats", base.replace(/\/$/, ""));
+          url.searchParams.set("bucketDays", "14");
+
+          const response = await fetch(url, {
+            headers: { "x-api-key": apiKey },
+          });
+
+          if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+          }
+
+          const payload = await response.json();
+          renderChart(payload);
+        } catch (error) {
+          setStatus("Failed to load stats: " + error.message, "error");
+        }
+      }
+
+      document.getElementById("loadLive").addEventListener("click", loadFromApi);
+      document
+        .getElementById("loadSample")
+        .addEventListener("click", () => renderChart(SAMPLE_STATS));
+
+      renderChart(SAMPLE_STATS);
+    </script>
+  </body>
+</html>

@@ -464,6 +464,14 @@ curl -X DELETE "http://localhost:3001/webhooks/queue/dead?deadBefore=2026-07-01T
   -H "x-api-key: dev-api-key-change-me"
 ```
 
+## Dashboard charts
+
+`GET /leads/stats` returns `dailyBuckets` with per-source counts (`bySource`) for stacked bar/area charts.
+
+- [`docs/stacked-chart.md`](docs/stacked-chart.md) — integration guide (Chart.js, Recharts)
+- [`docs/stacked-chart.html`](docs/stacked-chart.html) — standalone demo with sample data or live API fetch
+- `src/lib/lead-chart-series.ts` — `toStackedChartSeries()` helper for dashboard apps
+
 ## Next steps
 
 - Sample Grafana/Metabase dashboard JSON using `/leads/stats` stacked chart data
