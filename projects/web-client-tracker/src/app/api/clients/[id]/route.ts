@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/server/api-auth";
 import { getClientStore } from "@/lib/server/get-client-store";
 import { isValidClientForm, validateClientForm } from "@/lib/client-validation";
+import { isValidSnoozeDays } from "@/lib/clients";
 import type { ClientFormInput } from "@/lib/client-validation";
 
 interface RouteContext {
@@ -52,6 +53,29 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
     return NextResponse.json({ data: restored });
+  }
+
+  if (record.action === "snooze") {
+    if (!isValidSnoozeDays(record.days)) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Snooze days must be 1, 3, or 7",
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    const snoozed = store.snooze(id, record.days);
+    if (!snoozed) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Client not found" } },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json({ data: snoozed });
   }
 
   const input = body as ClientFormInput;

@@ -16,7 +16,9 @@ import {
   sortClientsByFollowUp,
 } from "@/lib/clients";
 import { ClientStatusBadge } from "./ClientStatusBadge";
+import { FollowUpSnoozeMenu } from "./FollowUpSnoozeMenu";
 import { FollowUpUrgencyBadge } from "./FollowUpUrgencyBadge";
+import type { SnoozeDays } from "@/lib/clients";
 
 const STATUS_OPTIONS: Array<{ value: ClientStatus | "all"; label: string }> = [
   { value: "all", label: "All statuses" },
@@ -42,6 +44,7 @@ interface ClientTableProps {
   onArchive?: (client: Client) => void;
   onRestore?: (client: Client) => void;
   onDelete?: (client: Client) => void;
+  onSnooze?: (client: Client, days: SnoozeDays) => void;
 }
 
 function formatFollowUpLabel(date: string): string {
@@ -67,6 +70,7 @@ export function ClientTable({
   onArchive,
   onRestore,
   onDelete,
+  onSnooze,
 }: ClientTableProps) {
   const [internalFilters, setInternalFilters] =
     useState<ClientListFilterState>(DEFAULT_CLIENT_LIST_FILTERS);
@@ -166,7 +170,9 @@ export function ClientTable({
     onFiltersChange,
   ]);
 
-  const hasActions = Boolean(onEdit || onViewActivity || onArchive || onRestore || onDelete);
+  const hasActions = Boolean(
+    onEdit || onViewActivity || onArchive || onRestore || onDelete || onSnooze,
+  );
   const showSelection = selectable && Boolean(onSelectionChange);
   const visibleIds = visibleClients.map((client) => client.id);
   const selectedVisibleCount = visibleIds.filter((id) =>
@@ -445,6 +451,12 @@ export function ClientTable({
                                 >
                                   Edit
                                 </button>
+                              ) : null}
+                              {onSnooze && client.status !== "closed" ? (
+                                <FollowUpSnoozeMenu
+                                  disabled={disabled}
+                                  onSnooze={(days) => onSnooze(client, days)}
+                                />
                               ) : null}
                               {onArchive ? (
                                 <button

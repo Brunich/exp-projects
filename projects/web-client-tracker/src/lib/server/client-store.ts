@@ -10,7 +10,7 @@ import { dirname } from "node:path";
 import { appendActivities, createActivity } from "../activity";
 import type { ClientFormInput } from "../client-validation";
 import { buildClientFromForm } from "../client-storage";
-import { SAMPLE_CLIENTS } from "../clients";
+import { SAMPLE_CLIENTS, snoozeFollowUpDate, type SnoozeDays } from "../clients";
 import type { Client, ClientActivity } from "../types";
 
 export interface ClientStoreOptions {
@@ -215,6 +215,33 @@ export class ClientStore {
     const updated = appendActivities(existing, [
       createActivity("note", { text: trimmed }),
     ]);
+
+    this.clients = this.clients.map((client) =>
+      client.id === id ? updated : client,
+    );
+    this.persistToFile();
+    return updated;
+  }
+
+  snooze(
+    id: string,
+    days: SnoozeDays,
+    today: Date = new Date(),
+  ): Client | null {
+    const existing = this.getById(id);
+    if (!existing) return null;
+
+    const nextFollowUp = snoozeFollowUpDate(days, today);
+
+    const updated = appendActivities(
+      { ...existing, nextFollowUp },
+      [
+        createActivity("follow_up_changed", {
+          text: `Snoozed +${days} day${days === 1 ? "" : "s"}`,
+          meta: { from: existing.nextFollowUp, to: nextFollowUp },
+        }),
+      ],
+    );
 
     this.clients = this.clients.map((client) =>
       client.id === id ? updated : client,

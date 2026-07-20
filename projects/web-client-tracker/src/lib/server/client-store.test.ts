@@ -136,6 +136,29 @@ describe("ClientStore", () => {
     expect(activities.some((entry) => entry.type === "restored")).toBe(true);
   });
 
+  it("snoozes follow-up and logs timeline activity", () => {
+    const store = createStore();
+    const created = store.create({
+      ...validInput,
+      nextFollowUp: "2026-07-02",
+    });
+    const today = new Date(2026, 6, 20);
+
+    const snoozed = store.snooze(created.id, 3, today);
+    expect(snoozed?.nextFollowUp).toBe("2026-07-23");
+
+    const activities = store.getById(created.id)?.activities ?? [];
+    expect(
+      activities.some(
+        (entry) =>
+          entry.type === "follow_up_changed" &&
+          entry.text === "Snoozed +3 days" &&
+          entry.meta?.from === "2026-07-02" &&
+          entry.meta?.to === "2026-07-23",
+      ),
+    ).toBe(true);
+  });
+
   it("writes valid JSON to disk", () => {
     const store = createStore();
     store.create(validInput);

@@ -10,6 +10,7 @@ Mini CRM for freelancers to track clients, pipeline status, and next follow-up d
 - REST API (`/api/clients`) with JSON file persistence
 - Client table with status badges and follow-up urgency labels
 - Follow-up urgency badges on table rows (today, tomorrow, overdue)
+- Snooze follow-up quick action (+1/+3/+7 days) on active client rows
 - Overdue follow-up alert banner
 - Email reminder drafts with mailto links and optional SMTP bulk send
 - Slack or generic webhook notifications for overdue follow-up digests
@@ -92,7 +93,7 @@ All `/api/clients` routes require an active session cookie (log in first).
 
 - `GET /api/clients` — list clients
 - `POST /api/clients` — create client
-- `PATCH /api/clients/:id` — update, archive (`{ "action": "archive" }`), or restore (`{ "action": "restore" }`)
+- `PATCH /api/clients/:id` — update, archive (`{ "action": "archive" }`), restore (`{ "action": "restore" }`), or snooze (`{ "action": "snooze", "days": 1 | 3 | 7 }`)
 - `GET /api/clients/:id/activity` — client activity timeline
 - `POST /api/clients/:id/activity` — add a timeline note (`{ "text": "..." }`)
 - `PATCH /api/clients/bulk` — archive or restore multiple clients (`{ "action": "archive" | "restore", "ids": ["uuid", ...] }`)

@@ -86,6 +86,14 @@ Partial update for client fields, or archive/restore via action.
 { "action": "restore" }
 ```
 
+**Snooze body**
+
+```json
+{ "action": "snooze", "days": 3 }
+```
+
+`days` must be `1`, `3`, or `7`. Sets `nextFollowUp` to today + N days and logs a timeline entry.
+
 **Response `200`**: `{ "data": { ...updated client } }`
 
 ### `PATCH /clients/bulk`

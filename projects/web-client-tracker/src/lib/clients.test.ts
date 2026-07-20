@@ -16,8 +16,10 @@ import {
   isArchived,
   isFollowUpDueThisWeek,
   isFollowUpOverdue,
+  isValidSnoozeDays,
   SAMPLE_CLIENTS,
   shouldShowFollowUpUrgencyBadge,
+  snoozeFollowUpDate,
   sortClientsByFollowUp,
 } from "./clients";
 
@@ -277,5 +279,25 @@ describe("shouldShowFollowUpUrgencyBadge", () => {
     expect(
       shouldShowFollowUpUrgencyBadge(SAMPLE_CLIENTS[2], { today }),
     ).toBe(false);
+  });
+});
+
+describe("snoozeFollowUpDate", () => {
+  const today = new Date(2026, 6, 20);
+
+  it("pushes follow-up from today by the selected days", () => {
+    expect(snoozeFollowUpDate(1, today)).toBe("2026-07-21");
+    expect(snoozeFollowUpDate(3, today)).toBe("2026-07-23");
+    expect(snoozeFollowUpDate(7, today)).toBe("2026-07-27");
+  });
+});
+
+describe("isValidSnoozeDays", () => {
+  it("accepts only 1, 3, and 7", () => {
+    expect(isValidSnoozeDays(1)).toBe(true);
+    expect(isValidSnoozeDays(3)).toBe(true);
+    expect(isValidSnoozeDays(7)).toBe(true);
+    expect(isValidSnoozeDays(2)).toBe(false);
+    expect(isValidSnoozeDays("7")).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { Client, ClientActivity } from "./types";
 import type { ClientFormInput } from "./client-validation";
+import type { SnoozeDays } from "./clients";
 
 export class ClientApiError extends Error {
   constructor(
@@ -83,6 +84,18 @@ export async function restoreClientById(id: string): Promise<Client> {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ action: "restore" }),
+  });
+  return parseResponse<Client>(response);
+}
+
+export async function snoozeClientById(
+  id: string,
+  days: SnoozeDays,
+): Promise<Client> {
+  const response = await fetch(`/api/clients/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action: "snooze", days }),
   });
   return parseResponse<Client>(response);
 }

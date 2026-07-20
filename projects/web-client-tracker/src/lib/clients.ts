@@ -248,6 +248,40 @@ export function getClientsDueThisWeek(
   );
 }
 
+export const SNOOZE_DAY_OPTIONS = [1, 3, 7] as const;
+export type SnoozeDays = (typeof SNOOZE_DAY_OPTIONS)[number];
+
+export function isValidSnoozeDays(value: unknown): value is SnoozeDays {
+  return (
+    typeof value === "number" &&
+    SNOOZE_DAY_OPTIONS.includes(value as SnoozeDays)
+  );
+}
+
+export function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function addDaysToIsoDate(
+  isoDate: string,
+  days: number,
+): string {
+  const base = parseDate(isoDate);
+  base.setDate(base.getDate() + days);
+  return formatIsoDate(base);
+}
+
+/** Push follow-up to today + N days (snooze from now, not from current date). */
+export function snoozeFollowUpDate(
+  days: SnoozeDays,
+  today: Date = new Date(),
+): string {
+  return addDaysToIsoDate(formatIsoDate(startOfDay(today)), days);
+}
+
 function parseDate(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day);

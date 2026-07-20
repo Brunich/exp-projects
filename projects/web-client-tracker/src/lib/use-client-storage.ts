@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Client } from "./types";
 import type { ClientFormInput } from "./client-validation";
+import type { SnoozeDays } from "./clients";
 import {
   archiveClientById,
   bulkArchiveClients,
@@ -11,6 +12,7 @@ import {
   deleteClientById,
   fetchClients,
   restoreClientById,
+  snoozeClientById,
   updateClient,
 } from "./client-api";
 
@@ -122,6 +124,18 @@ export function useClientStorage() {
     [runMutation],
   );
 
+  const snoozeClient = useCallback(
+    async (id: string, days: SnoozeDays) => {
+      await runMutation(async () => {
+        const snoozed = await snoozeClientById(id, days);
+        setClients((prev) =>
+          prev.map((client) => (client.id === id ? snoozed : client)),
+        );
+      });
+    },
+    [runMutation],
+  );
+
   const removeClient = useCallback(
     async (id: string) => {
       await runMutation(async () => {
@@ -174,6 +188,7 @@ export function useClientStorage() {
     archiveClientsBulk,
     restoreClient,
     restoreClientsBulk,
+    snoozeClient,
     removeClient,
   };
 }

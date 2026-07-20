@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Client } from "@/lib/types";
+import type { SnoozeDays } from "@/lib/clients";
 import type { ClientFormInput } from "@/lib/client-validation";
 import {
   filterActiveClients,
@@ -42,6 +43,7 @@ export function ClientsDashboard() {
     restoreClient,
     restoreClientsBulk,
     removeClient,
+    snoozeClient,
     refresh,
   } = useClientStorage();
   const [formMode, setFormMode] = useState<FormMode>(null);
@@ -124,6 +126,10 @@ export function ClientsDashboard() {
 
   async function handleRestore(client: Client) {
     await restoreClient(client.id);
+  }
+
+  async function handleSnooze(client: Client, days: SnoozeDays) {
+    await snoozeClient(client.id, days);
   }
 
   async function confirmPendingAction() {
@@ -318,6 +324,7 @@ export function ClientsDashboard() {
           onEdit={openEditForm}
           onViewActivity={setActivityClient}
           onArchive={handleArchive}
+          onSnooze={handleSnooze}
           disabled={mutating}
         />
       )}
