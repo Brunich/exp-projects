@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   appendRevisionNotes,
+  countQuotesByRevisionFilter,
   createValidityExtensionRevision,
   formatRevisionCountLabel,
   formatRevisionSummary,
   getQuoteRevisionCount,
   getQuoteRevisionTimeline,
+  hasQuoteRevisions,
+  matchesRevisionFilter,
   normalizeRevisionHistory,
 } from "./quote-revisions";
 import type { SavedQuote } from "./types";
@@ -117,6 +120,72 @@ describe("formatRevisionCountLabel", () => {
 
   it("uses plural copy for multiple revisions", () => {
     expect(formatRevisionCountLabel(3)).toBe("3 revisions");
+  });
+});
+
+describe("hasQuoteRevisions", () => {
+  it("returns false when history is missing", () => {
+    expect(hasQuoteRevisions(sampleQuote)).toBe(false);
+  });
+
+  it("returns true when revision history exists", () => {
+    const note = createValidityExtensionRevision({
+      previousValidUntil: "2026-07-04",
+      newValidUntil: "2026-07-18",
+      extensionDays: 14,
+    });
+
+    expect(hasQuoteRevisions({ ...sampleQuote, revisionHistory: [note] })).toBe(
+      true,
+    );
+  });
+});
+
+describe("matchesRevisionFilter", () => {
+  const revisedQuote = appendRevisionNotes(sampleQuote, [
+    createValidityExtensionRevision({
+      previousValidUntil: "2026-07-04",
+      newValidUntil: "2026-07-18",
+      extensionDays: 14,
+    }),
+  ]);
+
+  it("includes all quotes when filter is all", () => {
+    expect(matchesRevisionFilter(sampleQuote, "all")).toBe(true);
+    expect(matchesRevisionFilter(revisedQuote, "all")).toBe(true);
+  });
+
+  it("matches revised quotes only", () => {
+    expect(matchesRevisionFilter(sampleQuote, "revised")).toBe(false);
+    expect(matchesRevisionFilter(revisedQuote, "revised")).toBe(true);
+  });
+
+  it("matches unrevised quotes only", () => {
+    expect(matchesRevisionFilter(sampleQuote, "unrevised")).toBe(true);
+    expect(matchesRevisionFilter(revisedQuote, "unrevised")).toBe(false);
+  });
+});
+
+describe("countQuotesByRevisionFilter", () => {
+  const revisedQuote = appendRevisionNotes(sampleQuote, [
+    createValidityExtensionRevision({
+      previousValidUntil: "2026-07-04",
+      newValidUntil: "2026-07-18",
+      extensionDays: 14,
+    }),
+  ]);
+  const quotes = [
+    sampleQuote,
+    revisedQuote,
+    { ...sampleQuote, id: "quote-2" },
+  ];
+
+  it("counts revised quotes", () => {
+    expect(countQuotesByRevisionFilter(quotes, "revised")).toBe(1);
+  });
+
+  it("counts unrevised quotes", () => {
+    expect(countQuotesByRevisionFilter(quotes, "unrevised")).toBe(2);
   });
 });
 

@@ -15,6 +15,11 @@ import {
 import type { QuoteStatus, SavedQuote } from "@/lib/types";
 import type { RevisedQuoteEmailDraft as RevisedQuoteEmailDraftData } from "@/lib/quote-follow-up-email";
 import {
+  countQuotesByRevisionFilter,
+  matchesRevisionFilter,
+  type QuoteRevisionFilter,
+} from "@/lib/quote-revisions";
+import {
   QUOTE_VALIDITY_EXTENSION_PRESETS,
   formatValidityExtensionLabel,
 } from "@/lib/quote";
@@ -33,6 +38,8 @@ const STATUS_FILTERS: Array<QuoteStatus | "all" | "expired"> = [
   "accepted",
   "expired",
 ];
+
+const REVISION_FILTERS: QuoteRevisionFilter[] = ["all", "revised", "unrevised"];
 
 function formatQuoteLabel(quote: SavedQuote): string {
   if (quote.projectTitle.trim()) return quote.projectTitle.trim();
@@ -56,6 +63,7 @@ export function SavedQuotesList() {
     Record<string, RevisedQuoteEmailDraftData>
   >({});
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all" | "expired">("all");
+  const [revisionFilter, setRevisionFilter] = useState<QuoteRevisionFilter>("all");
   const { settings } = useBrandSettings();
   const businessName = resolveBusinessName(
     settings,
@@ -103,6 +111,9 @@ export function SavedQuotesList() {
     () =>
       [...quotes]
         .filter((quote) => {
+          if (!matchesRevisionFilter(quote, revisionFilter)) {
+            return false;
+          }
           if (statusFilter === "all") return true;
           if (statusFilter === "expired") {
             return quote.status !== "accepted" && isQuoteExpired(quote.validUntil);
@@ -113,7 +124,7 @@ export function SavedQuotesList() {
           (a, b) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
         ),
-    [quotes, statusFilter],
+    [quotes, revisionFilter, statusFilter],
   );
 
   const statusCounts = useMemo(() => {
@@ -126,6 +137,14 @@ export function SavedQuotesList() {
     }
     return counts;
   }, [quotes]);
+
+  const revisionCounts = useMemo(
+    () => ({
+      revised: countQuotesByRevisionFilter(quotes, "revised"),
+      unrevised: countQuotesByRevisionFilter(quotes, "unrevised"),
+    }),
+    [quotes],
+  );
 
   if (quotes.length === 0) {
     return (
@@ -164,12 +183,32 @@ export function SavedQuotesList() {
               </button>
             ))}
           </div>
+          <div className="flex rounded-lg border border-sky-200 bg-sky-50/50 p-0.5 text-xs">
+            {REVISION_FILTERS.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setRevisionFilter(filter)}
+                className={`rounded-md px-2.5 py-1 font-medium capitalize ${
+                  revisionFilter === filter
+                    ? "bg-sky-800 text-white"
+                    : "text-sky-800 hover:bg-sky-100"
+                }`}
+              >
+                {filter === "all"
+                  ? "Any revision"
+                  : filter === "revised"
+                    ? `Revised (${revisionCounts.revised})`
+                    : `Unrevised (${revisionCounts.unrevised})`}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {sorted.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
-          No {statusFilter === "all" ? "" : statusFilter === "expired" ? "expired " : `${statusFilter} `}quotes match this filter.
+          No quotes match the current filters.
         </p>
       ) : (
       <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white shadow-sm">

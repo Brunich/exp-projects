@@ -24,6 +24,7 @@ Next.js app for local service providers to build client-ready quotes from reusab
 - Revised quote email drafts after extending validity (mailto link to notify the client)
 - Revision history timeline on saved quotes when validity is extended
 - Revision count badge on the saved quotes list (e.g. "2 revisions")
+- Revision filter on the saved quotes list (revised / unrevised, combinable with status filters)
 
 ## Quick start
 

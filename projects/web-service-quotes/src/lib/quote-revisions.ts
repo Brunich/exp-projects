@@ -44,6 +44,31 @@ export function getQuoteRevisionCount(quote: SavedQuote): number {
   return quote.revisionHistory?.length ?? 0;
 }
 
+export type QuoteRevisionFilter = "all" | "revised" | "unrevised";
+
+export function hasQuoteRevisions(quote: SavedQuote): boolean {
+  return getQuoteRevisionCount(quote) > 0;
+}
+
+export function matchesRevisionFilter(
+  quote: SavedQuote,
+  filter: QuoteRevisionFilter,
+): boolean {
+  if (filter === "all") {
+    return true;
+  }
+
+  const revised = hasQuoteRevisions(quote);
+  return filter === "revised" ? revised : !revised;
+}
+
+export function countQuotesByRevisionFilter(
+  quotes: SavedQuote[],
+  filter: Exclude<QuoteRevisionFilter, "all">,
+): number {
+  return quotes.filter((quote) => matchesRevisionFilter(quote, filter)).length;
+}
+
 export function formatRevisionCountLabel(count: number): string | null {
   if (count <= 0) {
     return null;
